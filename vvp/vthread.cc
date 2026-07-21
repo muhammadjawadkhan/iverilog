@@ -30,6 +30,7 @@
 # include  "vvp_aarray.h"
 # include  "vvp_vif.h"
 # include  "vvp_mailbox.h"
+# include  "vvp_covergroup.h"
 # include  "class_type.h"
 #ifdef CHECK_WITH_VALGRIND
 # include  "vvp_cleanup.h"
@@ -8689,5 +8690,39 @@ bool of_URANDOM(vthread_t thr, vvp_code_t cp)
       }
 
       thr->push_vec4(val);
+      return true;
+}
+
+/* ================================================================
+ * Covergroup opcodes
+ * ================================================================ */
+
+bool of_COV_NEW(vthread_t thr, vvp_code_t cp)
+{
+      vvp_object_t parent;
+      thr->pop_object(parent);
+      const char*desc = cp->text ? cp->text : "";
+      vvp_object_t cg(vvp_covergroup::make(parent, desc));
+      thr->push_object(cg);
+      return true;
+}
+
+bool of_COV_SAMPLE(vthread_t thr, vvp_code_t)
+{
+      vvp_object_t cg_obj;
+      thr->pop_object(cg_obj);
+      vvp_covergroup*cg = cg_obj.peek<vvp_covergroup>();
+      if (cg)
+	    cg->sample();
+      return true;
+}
+
+bool of_COV_GET_INST(vthread_t thr, vvp_code_t)
+{
+      vvp_object_t cg_obj;
+      thr->pop_object(cg_obj);
+      vvp_covergroup*cg = cg_obj.peek<vvp_covergroup>();
+      double r = cg ? cg->get_inst_coverage() : 0.0;
+      thr->push_real(r);
       return true;
 }

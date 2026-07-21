@@ -441,6 +441,30 @@ struct class_type_t : public data_type_t {
 };
 
 /*
+ * Embedded covergroup type (Tier A #8 minimal slice).
+ * coverpoint var_name + named bins with constant value lists.
+ */
+struct cover_bin_pform_t {
+      perm_string name;
+      std::list<PExpr*>* values;
+};
+
+struct coverpoint_pform_t {
+      perm_string var_name;
+      std::list<cover_bin_pform_t*>* bins;
+};
+
+struct covergroup_type_t : public data_type_t {
+      explicit covergroup_type_t(perm_string n) : name(n) { }
+
+      void pform_dump(std::ostream&out, unsigned indent) const override;
+      ivl_type_t elaborate_type_raw(Design*des, NetScope*scope) const override;
+
+      perm_string name;
+      std::vector<coverpoint_pform_t> coverpoints;
+};
+
+/*
  * virtual [interface] interface_identifier
  * Optional modport is parsed but deferred (not used in this slice).
  */

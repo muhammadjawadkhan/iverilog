@@ -818,6 +818,45 @@ int draw_eval_object(ivl_expr_t ex)
 		  fprintf(vvp_out, "    %%sem/new %ld;\n", cnt);
 		  return 0;
 	    }
+	    /* Covergroup constructor: $ivl_covergroup$new(parent, nbins, ...) */
+	    if (strcmp(ivl_expr_name(ex), "$ivl_covergroup$new") == 0) {
+		  unsigned parm_count = ivl_expr_parms(ex);
+		  assert(parm_count >= 2);
+		  draw_eval_object(ivl_expr_parm(ex, 0));
+		  {
+			char desc[4096];
+			size_t pos = 0;
+			unsigned long nbins = 0;
+			ivl_expr_t nexpr = ivl_expr_parm(ex, 1);
+			if (nexpr && ivl_expr_type(nexpr) == IVL_EX_NUMBER)
+			      nbins = (unsigned long)ivl_expr_uvalue(nexpr);
+			pos += snprintf(desc + pos, sizeof(desc) - pos, "%lu", nbins);
+			unsigned pi = 2;
+			unsigned bi;
+			for (bi = 0 ; bi < nbins && pi < parm_count ; bi += 1) {
+			      unsigned long prop = 0, nvals = 0;
+			      ivl_expr_t pex = ivl_expr_parm(ex, pi++);
+			      if (pex && ivl_expr_type(pex) == IVL_EX_NUMBER)
+				    prop = (unsigned long)ivl_expr_uvalue(pex);
+			      ivl_expr_t nex = (pi < parm_count) ? ivl_expr_parm(ex, pi++) : 0;
+			      if (nex && ivl_expr_type(nex) == IVL_EX_NUMBER)
+				    nvals = (unsigned long)ivl_expr_uvalue(nex);
+			      pos += snprintf(desc + pos, sizeof(desc) - pos,
+					       ";%lu:%lu:", prop, nvals);
+			      unsigned vi;
+			      for (vi = 0 ; vi < nvals && pi < parm_count ; vi += 1) {
+				    long val = 0;
+				    ivl_expr_t vex = ivl_expr_parm(ex, pi++);
+				    if (vex && ivl_expr_type(vex) == IVL_EX_NUMBER)
+					  val = (long)ivl_expr_uvalue(vex);
+				    pos += snprintf(desc + pos, sizeof(desc) - pos,
+						    "%s%ld", vi ? "," : "", val);
+			      }
+			}
+			fprintf(vvp_out, "    %%cov/new \"%s\";\n", desc);
+		  }
+		  return 0;
+	    }
 	    if (strcmp(ivl_expr_name(ex), "$ivl_vif_new") == 0) {
 		  unsigned n = ivl_expr_parms(ex);
 		  fprintf(vvp_out, "    %%new/vif %u", n);

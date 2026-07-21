@@ -20,7 +20,8 @@ Last updated: 2026-07-21
 | Mailbox / semaphore | **Partial** on `feat/mailbox-semaphore`: compiler builtins; `mailbox #(int)` + blocking/nonblocking put/get/num; `semaphore` get/put/try_get. See [`docs/mailbox-semaphore.md`](mailbox-semaphore.md) and [`examples/mailbox_sem`](../examples/mailbox_sem). |
 | Constraints / randomize | **Partial** on `feat/constraints-reject`: unconstrained `rand`/`randc` plus hard relational constraints via rejection sampling (`constraint {}`, `randomize() with`). See [`docs/constraints.md`](constraints.md), [`docs/randomize.md`](randomize.md), [`examples/constraints`](../examples/constraints). |
 | `$cast` / `$typename` | **Partial** on `feat/cast-typename`: class-handle `$cast` (dynamic is-a + assign); static `$typename` → `"class <name>"` etc. See [`docs/cast-typename.md`](cast-typename.md) and [`examples/cast_typename`](../examples/cast_typename). |
-| Covergroups / DPI | Missing |
+| Covergroups | **Partial** on `feat/covergroup`: embedded `covergroup`/`coverpoint`/`bins`, `sample()`, `get_inst_coverage()` percentage. See [`docs/covergroup.md`](covergroup.md) and [`examples/covergroup`](../examples/covergroup). |
+| DPI | Missing |
 
 ## Remotes
 

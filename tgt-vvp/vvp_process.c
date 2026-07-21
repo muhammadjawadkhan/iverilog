@@ -2048,6 +2048,13 @@ static int show_system_task_call(ivl_statement_t net)
 	    return 0;
       }
 
+      if (strcmp(stmt_name, "$ivl_covergroup$sample") == 0) {
+	    ivl_expr_t cg = ivl_stmt_parm(net, 0);
+	    if (cg) draw_eval_object(cg);
+	    fprintf(vvp_out, "    %%cov/sample;\n");
+	    return 0;
+      }
+
       if (strcmp(stmt_name, "$ivl_randomize") == 0) {
 	    ivl_expr_t obj = ivl_stmt_parm(net, 0);
 	    if (obj) {

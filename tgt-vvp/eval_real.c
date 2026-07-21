@@ -539,7 +539,11 @@ void draw_eval_real(ivl_expr_t expr)
 		  real_ex_pop(expr);
 	    else if (strcmp(ivl_expr_name(expr), "$ivl_queue_method$pop_front")==0)
 		  real_ex_pop(expr);
-	    else
+	    else if (strcmp(ivl_expr_name(expr), "$ivl_covergroup$get_inst_coverage")==0) {
+		  ivl_expr_t cg = ivl_expr_parm(expr, 0);
+		  if (cg) draw_eval_object(cg);
+		  fprintf(vvp_out, "    %%cov/get_inst;\n");
+	    } else
 		  draw_sfunc_real(expr);
 	    break;
 

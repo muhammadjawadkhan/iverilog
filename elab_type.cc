@@ -152,6 +152,57 @@ ivl_type_t class_type_t::elaborate_type_raw(Design*des, NetScope*scope) const
       return scope->find_class(des, name);
 }
 
+ivl_type_t covergroup_type_t::elaborate_type_raw(Design*des, NetScope*scope) const
+{
+      netclass_t*cls = new netclass_t(name, 0);
+      std::vector<netclass_t::cover_bin_t> bins;
+
+      for (size_t cpi = 0 ; cpi < coverpoints.size() ; cpi += 1) {
+	    const coverpoint_pform_t&cp = coverpoints[cpi];
+	    if (!cp.bins)
+		  continue;
+	    for (std::list<cover_bin_pform_t*>::const_iterator bi = cp.bins->begin()
+		       ; bi != cp.bins->end() ; ++bi) {
+		  cover_bin_pform_t*bp = *bi;
+		  if (!bp)
+			continue;
+		  netclass_t::cover_bin_t nb;
+		  nb.name = bp->name;
+		  nb.var_name = cp.var_name;
+		  if (bp->values) {
+			for (std::list<PExpr*>::const_iterator vi = bp->values->begin()
+				   ; vi != bp->values->end() ; ++vi) {
+			      PExpr*e = *vi;
+			      if (!e)
+				    continue;
+			      NetExpr*ne = elab_and_eval(des, scope, e, -1, true, false);
+			      NetEConst*c = dynamic_cast<NetEConst*>(ne);
+			      if (!c) {
+				    cerr << e->get_fileline() << ": sorry: "
+					 << "covergroup bins must be constant integers."
+					 << endl;
+				    des->errors += 1;
+				    delete ne;
+				    continue;
+			      }
+			      nb.values.push_back(c->value().as_long());
+			      delete ne;
+			}
+		  }
+		  if (nb.values.empty()) {
+			cerr << get_fileline() << ": warning: "
+			     << "coverpoint bin `" << nb.name
+			     << "' has no values; ignored." << endl;
+			continue;
+		  }
+		  bins.push_back(nb);
+	    }
+      }
+
+      cls->set_covergroup_bins(bins);
+      return cls;
+}
+
 ivl_type_t virtual_interface_type_t::elaborate_type_raw(Design*des, NetScope*scope) const
 {
       map<perm_string,Module*>::const_iterator cur = pform_modules.find(name);
