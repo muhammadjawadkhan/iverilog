@@ -129,6 +129,20 @@ void pform_class_property(const struct vlltype&loc,
       }
 }
 
+void pform_class_constraint(const struct vlltype&loc,
+			    perm_string, std::list<PExpr*>*exprs)
+{
+      ivl_assert(loc, pform_cur_class);
+      if (!exprs)
+	    return;
+      for (std::list<PExpr*>::iterator cur = exprs->begin()
+		 ; cur != exprs->end() ; ++cur) {
+	    if (*cur)
+		  pform_cur_class->type->constraints.push_back(*cur);
+      }
+      delete exprs;
+}
+
 void pform_set_this_class(const struct vlltype&loc, PTaskFunc*net)
 {
       if (pform_cur_class == 0)

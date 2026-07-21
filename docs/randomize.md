@@ -1,6 +1,6 @@
 # Unconstrained `randomize()` / `rand` (Tier A #6, first slice)
 
-Status: **partial** — unconstrained integral `rand`/`randc` only; no constraint solver.
+Status: **partial** — unconstrained integral `rand`/`randc`, plus hard constraints via rejection sampling (see [constraints.md](constraints.md)).
 
 ## Supported in this slice
 
@@ -20,29 +20,32 @@ bit ok = p.randomize();     // returns 1; assigns random values to a,b
 - Assigns random 0/1 bits to all `rand` and `randc` **integral** (`bit`/`logic`/`reg` packed) instance properties
 - Non-rand properties are unchanged
 - `randc` is treated like `rand` for now (no cyclic guarantee)
+- Hard class constraints and `randomize() with { ... }` — see [constraints.md](constraints.md)
 
 ## Encoding
 
 | Layer | Role |
 |-------|------|
-| Parse | `rand`/`randc` already property qualifiers; `constraint` / `randomize() with` remain **sorry** |
-| Elab | `obj.randomize()` → `$ivl_randomize(obj)` (expr or task) |
+| Parse | `rand`/`randc` property qualifiers; hard `constraint` / `with` kept (soft/dist/`->`/if/foreach → **sorry**) |
+| Elab | `obj.randomize()` → `$ivl_randomize(obj [, preds...])` |
 | Target API | `ivl_type_prop_rand()` exposes qualifiers to codegen |
-| Codegen | `%urandom <wid>` + `%store/prop/v` per rand property |
+| Codegen | `%urandom` + `%store/prop/v`; with preds → rejection loop |
 | Runtime | `%urandom` fills vec4 with RNG bits (`std::mt19937`) |
 
 ## Deferred (do not claim)
 
-- Constraint blocks / solver
-- `randomize() with { ... }`
+- Soft / dist / implication / if / foreach constraints
+- True constraint solver
 - `rand_mode` / `constraint_mode`
 - True `randc` cyclic behavior
 - Randomizing non-integral properties (reals, strings, class handles, arrays)
-- `std::randomize` procedural form / inline constraints
+- `std::randomize` procedural form
 
 ## Example
 
-[`examples/randomize/randomize_basic.sv`](../examples/randomize/randomize_basic.sv) — prints `PASSED`.
+[`examples/randomize/randomize_basic.sv`](../examples/randomize/randomize_basic.sv) — unconstrained; prints `PASSED`.
+
+[`examples/constraints/constraints_basic.sv`](../examples/constraints/constraints_basic.sv) — hard constraints + `with`.
 
 ```bash
 ./install/bin/iverilog -g2012 -o /tmp/rand.vvp examples/randomize/randomize_basic.sv

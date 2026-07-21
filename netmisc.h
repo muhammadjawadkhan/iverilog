@@ -387,6 +387,11 @@ extern NetExpr* elab_and_eval(Design*des, NetScope*scope,
 extern NetExpr* elab_sys_task_arg(Design*des, NetScope*scope,
                                   perm_string name, unsigned arg_idx,
                                   PExpr*pe, bool need_const =false);
+
+/* Elaborate a hard constraint predicate for constrained randomize(). */
+extern NetExpr* elab_hard_constraint_pred(Design*des, NetScope*scope,
+					  const netclass_t*cls, NetNet*obj,
+					  PExpr*expr, const LineInfo&loc);
 /*
  * This function elaborates an expression as if it is for the r-value
  * of an assignment, The lv_type and lv_width are the type and width

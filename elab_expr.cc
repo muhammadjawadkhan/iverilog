@@ -3795,6 +3795,91 @@ unsigned PECallFunction::elaborate_arguments_(Design*des, NetScope*scope,
 }
 
 /*
+ * Elaborate a hard constraint predicate for rejection-sampling
+ * randomize(). Class-property identifiers become NetEProperty nodes
+ * bound to the object being randomized.
+ */
+static NetExpr* elab_constraint_operand(Design*des, NetScope*scope,
+					const netclass_t*cls, NetNet*obj,
+					PExpr*expr, const LineInfo&loc)
+{
+      if (PEIdent*id = dynamic_cast<PEIdent*>(expr)) {
+	    const pform_name_t&n = id->path().name;
+	    if (n.size() == 1) {
+		  int pidx = cls->property_idx_from_name(n.front().name);
+		  if (pidx >= 0) {
+			NetEProperty*prop = new NetEProperty(obj, (size_t)pidx, 0);
+			prop->set_line(loc);
+			return prop;
+		  }
+	    }
+      }
+      return elab_and_eval(des, scope, expr, -1, false, false);
+}
+
+NetExpr* elab_hard_constraint_pred(Design*des, NetScope*scope,
+					  const netclass_t*cls, NetNet*obj,
+					  PExpr*expr, const LineInfo&loc)
+{
+      if (PEBComp*comp = dynamic_cast<PEBComp*>(expr)) {
+	    char op = comp->get_op();
+	    switch (op) {
+		case 'e': /* == */
+		case 'n': /* != */
+		case '<':
+		case '>':
+		case 'L': /* <= */
+		case 'G': /* >= */
+		  break;
+		default:
+		  cerr << loc.get_fileline() << ": sorry: Constraint comparison "
+		       << "operator is not supported in this slice." << endl;
+		  des->errors += 1;
+		  return 0;
+	    }
+	    NetExpr*l = elab_constraint_operand(des, scope, cls, obj,
+						comp->get_left(), loc);
+	    NetExpr*r = elab_constraint_operand(des, scope, cls, obj,
+						comp->get_right(), loc);
+	    if (!l || !r) {
+		  delete l;
+		  delete r;
+		  return 0;
+	    }
+	    NetEBComp*n = new NetEBComp(op, l, r);
+	    n->set_line(loc);
+	    return n;
+      }
+
+      if (PEBLogic*logic = dynamic_cast<PEBLogic*>(expr)) {
+	    if (logic->get_op() != 'a') { /* && */
+		  cerr << loc.get_fileline() << ": sorry: Only && is supported "
+		       << "as a constraint compound operator in this slice."
+		       << endl;
+		  des->errors += 1;
+		  return 0;
+	    }
+	    NetExpr*l = elab_hard_constraint_pred(des, scope, cls, obj,
+						  logic->get_left(), loc);
+	    NetExpr*r = elab_hard_constraint_pred(des, scope, cls, obj,
+						  logic->get_right(), loc);
+	    if (!l || !r) {
+		  delete l;
+		  delete r;
+		  return 0;
+	    }
+	    NetEBLogic*n = new NetEBLogic('a', l, r);
+	    n->set_line(loc);
+	    return n;
+      }
+
+      cerr << loc.get_fileline() << ": sorry: Hard constraints in this slice "
+	   << "support only == != < > <= >= (and && of those)." << endl;
+      des->errors += 1;
+      return 0;
+}
+
+/*
  * Elaborate a call to a single class method, optionally using an alternate
  * argument vector (for chained calls where inner methods use no user args).
  */
@@ -4354,18 +4439,43 @@ NetExpr* PECallFunction::elaborate_expr_method_(Design*des, NetScope*scope,
 		  return sys;
 	    }
 
-	    /* Unconstrained std::randomize vertical slice: assign random
-	       values to rand/randc integral properties; return 1. */
+	    /* Class.randomize(): fill rand props; optional hard constraints
+	       via rejection sampling (class constraint {} + with {}). */
 	    if (method_name == perm_string::literal("randomize")) {
 		  if (!parms_.empty()) {
 			cerr << get_fileline() << ": sorry: randomize() with "
 			     << "arguments is not supported yet." << endl;
 			des->errors += 1;
 		  }
+
+		  std::vector<PExpr*> preds = class_type->get_constraints();
+		  for (size_t i = 0 ; i < constraint_exprs_.size() ; i += 1)
+			preds.push_back(constraint_exprs_[i]);
+
+		  if (!preds.empty() && net == 0) {
+			cerr << get_fileline() << ": sorry: constrained "
+			     << "randomize() requires a class variable."
+			     << endl;
+			des->errors += 1;
+			return 0;
+		  }
+
 		  NetESFunc*sys = new NetESFunc("$ivl_randomize",
-						 &netvector_t::scalar_logic, 1);
+						 &netvector_t::scalar_logic,
+						 1 + preds.size());
 		  sys->set_line(*this);
 		  sys->parm(0, sub_expr);
+
+		  for (size_t i = 0 ; i < preds.size() ; i += 1) {
+			NetExpr*pred = elab_hard_constraint_pred(des, scope,
+								 class_type, net,
+								 preds[i], *this);
+			if (!pred) {
+			      delete sys;
+			      return 0;
+			}
+			sys->parm(1 + i, pred);
+		  }
 		  return sys;
 	    }
 

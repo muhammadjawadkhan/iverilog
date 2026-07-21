@@ -790,6 +790,10 @@ class PEBinary : public PExpr {
 				     unsigned expr_wid,
                                      unsigned flags) const override;
 
+      inline char get_op() const { return op_; }
+      inline PExpr* get_left() const { return left_; }
+      inline PExpr* get_right() const { return right_; }
+
     protected:
       char op_;
       PExpr*left_;
@@ -957,6 +961,10 @@ class PECallFunction : public PExpr {
       void set_with_clause(PExpr* with_expr);
       const PExpr* peek_with_clause(void) const { return with_expr_; }
 
+	// SystemVerilog: randomize() with { hard constraints }
+      void set_constraint_exprs(std::list<PExpr*>* exprs);
+      const std::vector<PExpr*>& constraint_exprs() const { return constraint_exprs_; }
+
       ~PECallFunction() override;
 
 	// For chained-call resolution (path is only the final method name).
@@ -984,6 +992,7 @@ class PECallFunction : public PExpr {
 	// If non-null, this call is prefix().tail_name(...) (SV method chain).
       PExpr* chain_prefix_ = nullptr;
       PExpr* with_expr_ = nullptr;
+      std::vector<PExpr*> constraint_exprs_;
 
         // For system functions.
       bool is_overridden_;

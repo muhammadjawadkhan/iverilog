@@ -186,6 +186,19 @@ PCallTask::~PCallTask()
 {
 }
 
+void PCallTask::set_constraint_exprs(std::list<PExpr*>* exprs)
+{
+      constraint_exprs_.clear();
+      if (!exprs)
+	    return;
+      for (std::list<PExpr*>::iterator cur = exprs->begin()
+		 ; cur != exprs->end() ; ++cur) {
+	    if (*cur)
+		  constraint_exprs_.push_back(*cur);
+      }
+      delete exprs;
+}
+
 const pform_name_t& PCallTask::path() const
 {
       return path_;

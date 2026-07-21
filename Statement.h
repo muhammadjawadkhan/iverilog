@@ -245,6 +245,10 @@ class PCallTask  : public Statement {
 
       void void_cast() { void_cast_ = true; }
 
+	// SystemVerilog: randomize() with { hard constraints } (task form).
+      void set_constraint_exprs(std::list<PExpr*>* exprs);
+      const std::vector<PExpr*>& constraint_exprs() const { return constraint_exprs_; }
+
     private:
       NetProc* elaborate_sys(Design*des, NetScope*scope) const;
       NetProc* elaborate_usr(Design*des, NetScope*scope) const;
@@ -304,6 +308,7 @@ class PCallTask  : public Statement {
       PPackage*package_;
       pform_name_t path_;
       std::vector<named_pexpr_t> parms_;
+      std::vector<PExpr*> constraint_exprs_;
       bool void_cast_ = false;
 };
 

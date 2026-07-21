@@ -233,3 +233,8 @@ bool netclass_t::test_compatibility(ivl_type_t that) const
 
       return false;
 }
+
+void netclass_t::set_constraints(const std::vector<PExpr*>& exprs)
+{
+      constraints_ = exprs;
+}

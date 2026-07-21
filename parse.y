@@ -1104,6 +1104,10 @@ Module::port_t *module_declare_interface_port(const YYLTYPE&loc, char *type,
 %type <vartype> integer_vector_type integer_vector_type_no_reg
 %type <parmvalue> parameter_value_opt type_parameter_value
 
+%type <exprs> constraint_block_item_list constraint_block_item_list_opt
+%type <expr>  constraint_block_item constraint_expression
+%type <exprs> constraint_expression_list
+
 %type <event_exprs> event_expression_list
 %type <event_expr> event_expression
 %type <event_statement> event_control
@@ -1548,54 +1552,116 @@ concurrent_assertion_statement /* IEEE1800-2012 A.2.10 */
 
 constraint_block_item /* IEEE1800-2005 A.1.9 */
   : constraint_expression
+      { $$ = $1; }
   ;
 
 constraint_block_item_list
   : constraint_block_item_list constraint_block_item
+      { std::list<PExpr*>*tmp = $1;
+	if ($2)
+	      tmp->push_back($2);
+	$$ = tmp;
+      }
   | constraint_block_item
+      { std::list<PExpr*>*tmp = new std::list<PExpr*>;
+	if ($1)
+	      tmp->push_back($1);
+	$$ = tmp;
+      }
   ;
 
 constraint_block_item_list_opt
   :
+      { $$ = 0; }
   | constraint_block_item_list
+      { $$ = $1; }
   ;
 
 constraint_declaration /* IEEE1800-2005: A.1.9 */
   : K_static_opt K_constraint IDENTIFIER '{' constraint_block_item_list_opt '}'
-      { yyerror(@2, "sorry: Constraint declarations not supported."); }
+      { perm_string cname = lex_strings.make($3);
+	delete[]$3;
+	if ($1)
+	      yyerror(@2, "sorry: Static constraint blocks are not supported yet.");
+	pform_class_constraint(@2, cname, $5);
+      }
 
   /* Error handling rules... */
 
   | K_static_opt K_constraint IDENTIFIER '{' error '}'
-      { yyerror(@4, "error: Errors in the constraint block item list."); }
+      { yyerror(@4, "error: Errors in the constraint block item list.");
+	delete[]$3;
+      }
   ;
 
 constraint_expression /* IEEE1800-2005 A.1.9 */
   : expression ';'
+      { $$ = $1; }
   | expression K_dist '{' '}' ';'
+      { yyerror(@2, "sorry: Constraint dist is not supported yet.");
+	delete $1;
+	$$ = 0;
+      }
   | expression constraint_trigger
+      { yyerror(@2, "sorry: Constraint implication (->) is not supported yet.");
+	delete $1;
+	$$ = 0;
+      }
   | K_if '(' expression ')' constraint_set %prec less_than_K_else
+      { yyerror(@1, "sorry: Constraint if/else is not supported yet.");
+	delete $3;
+	$$ = 0;
+      }
   | K_if '(' expression ')' constraint_set K_else constraint_set
+      { yyerror(@1, "sorry: Constraint if/else is not supported yet.");
+	delete $3;
+	$$ = 0;
+      }
   | K_foreach '(' IDENTIFIER '[' loop_variables ']' ')' constraint_set
+      { yyerror(@1, "sorry: Constraint foreach is not supported yet.");
+	delete[]$3;
+	$$ = 0;
+      }
   ;
 
 constraint_trigger
   : K_CONSTRAINT_IMPL '{' constraint_expression_list '}'
+      { delete $3; }
   ;
 
 constraint_expression_list /* */
   : constraint_expression_list constraint_expression
+      { std::list<PExpr*>*tmp = $1;
+	if ($2)
+	      tmp->push_back($2);
+	$$ = tmp;
+      }
   | constraint_expression
+      { std::list<PExpr*>*tmp = new std::list<PExpr*>;
+	if ($1)
+	      tmp->push_back($1);
+	$$ = tmp;
+      }
   ;
 
 constraint_prototype /* IEEE1800-2005: A.1.9 */
   : K_static_opt K_constraint IDENTIFIER ';'
-      { yyerror(@2, "sorry: Constraint prototypes not supported."); }
+      { yyerror(@2, "sorry: Constraint prototypes not supported.");
+	delete[]$3;
+      }
   ;
 
 constraint_set /* IEEE1800-2005 A.1.9 */
   : constraint_expression
+      { delete $1; }
   | '{' constraint_expression_list '}'
+      { if ($2) {
+	      for (std::list<PExpr*>::iterator i = $2->begin()
+			 ; i != $2->end() ; ++i)
+		    delete *i;
+	      delete $2;
+	}
+      }
   ;
 
 data_declaration /* IEEE1800-2005: A.2.1.3 */
@@ -4602,6 +4668,40 @@ call_chain_expr
 	      $$ = 0;
 	} else {
 	      cf->set_with_clause($4);
+	      $$ = cf;
+	}
+      }
+  | call_chain_expr K_with '{' constraint_block_item_list_opt '}'
+      { PECallFunction* cf = dynamic_cast<PECallFunction*>($1);
+	if (cf == 0) {
+	      yyerror(@2, "error: Constraint block can only be applied to a method call.");
+	      delete $1;
+	      if ($4) {
+		    for (std::list<PExpr*>::iterator i = $4->begin()
+			       ; i != $4->end() ; ++i)
+			  delete *i;
+		    delete $4;
+	      }
+	      $$ = 0;
+	} else if (peek_tail_name(cf->peek_path()) != "randomize") {
+	      yyerror(@2, "error: Constraint block can only be applied to randomize method.");
+	      delete $1;
+	      if ($4) {
+		    for (std::list<PExpr*>::iterator i = $4->begin()
+			       ; i != $4->end() ; ++i)
+			  delete *i;
+		    delete $4;
+	      }
+	      $$ = 0;
+	} else {
+	      if (pform_requires_sv(@2, "Randomize with constraint"))
+		    cf->set_constraint_exprs($4);
+	      else if ($4) {
+		    for (std::list<PExpr*>::iterator i = $4->begin()
+			       ; i != $4->end() ; ++i)
+			  delete *i;
+		    delete $4;
+	      }
 	      $$ = cf;
 	}
       }
@@ -7856,15 +7956,24 @@ statement_item /* This is roughly statement_item in the LRM */
 
   | hierarchy_identifier K_with '{' constraint_block_item_list_opt '}' ';'
       { /* ....randomize with { <constraints> } */
+	PCallTask*tmp = 0;
 	if (peek_tail_name(*$1) == "randomize") {
-	      if (pform_requires_sv(@2, "Randomize with constraint"))
-		    yyerror(@2, "sorry: Randomize with constraint not supported.");
+	      if (pform_requires_sv(@2, "Randomize with constraint")) {
+		    list<named_pexpr_t> pt;
+		    tmp = new PCallTask(*$1, pt);
+		    FILE_NAME(tmp, @1);
+		    tmp->set_constraint_exprs($4);
+		    $4 = 0;
+	      }
 	} else {
 	      yyerror(@2, "error: Constraint block can only be applied to randomize method.");
 	}
-	list<named_pexpr_t> pt;
-	PCallTask*tmp = new PCallTask(*$1, pt);
-	FILE_NAME(tmp, @1);
+	if ($4) {
+	      for (std::list<PExpr*>::iterator i = $4->begin()
+			 ; i != $4->end() ; ++i)
+		    delete *i;
+	      delete $4;
+	}
 	delete $1;
 	$$ = tmp;
       }

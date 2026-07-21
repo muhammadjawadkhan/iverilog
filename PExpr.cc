@@ -290,6 +290,19 @@ void PECallFunction::set_with_clause(PExpr* with_expr)
       with_expr_ = with_expr;
 }
 
+void PECallFunction::set_constraint_exprs(std::list<PExpr*>* exprs)
+{
+      constraint_exprs_.clear();
+      if (!exprs)
+	    return;
+      for (std::list<PExpr*>::iterator cur = exprs->begin()
+		 ; cur != exprs->end() ; ++cur) {
+	    if (*cur)
+		  constraint_exprs_.push_back(*cur);
+      }
+      delete exprs;
+}
+
 PECallFunction::~PECallFunction()
 {
       delete chain_prefix_;

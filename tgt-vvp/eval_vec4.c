@@ -39,14 +39,20 @@ void resize_vec4_wid(ivl_expr_t expr, unsigned wid)
 }
 
 /*
- * Unconstrained randomize: for each rand/randc integral property of
- * the class, push random bits and store into the property. Leaves a
- * 1-bit success (1) on the vec4 stack when leave_result is set.
+ * Class randomize with optional hard constraints (rejection sampling):
+ * fill all rand/randc integral properties with %urandom, evaluate
+ * constraint predicates, retry up to ~10000 times. Leaves a 1-bit
+ * success flag when leave_result is set.
  */
-void draw_ivl_randomize(ivl_expr_t obj, int leave_result)
+void draw_ivl_randomize(ivl_expr_t obj, unsigned ncons, ivl_expr_t*cons,
+			int leave_result)
 {
       ivl_type_t cls = ivl_expr_net_type(obj);
       int idx;
+      unsigned lab_retry, lab_ok, lab_fail, lab_check;
+      int attempt_reg;
+      int limit_reg;
+      unsigned cidx;
 
       if (cls == 0 && ivl_expr_type(obj) == IVL_EX_SIGNAL) {
 	    ivl_signal_t sig = ivl_expr_signal(obj);
@@ -54,44 +60,130 @@ void draw_ivl_randomize(ivl_expr_t obj, int leave_result)
 		  cls = ivl_signal_net_type(sig);
       }
 
-      draw_eval_object(obj);
-
       if (cls == 0 || ivl_type_base(cls) != IVL_VT_CLASS) {
+	    draw_eval_object(obj);
 	    fprintf(vvp_out, "    %%pop/obj 1, 0;\n");
 	    if (leave_result)
 		  fprintf(vvp_out, "    %%pushi/vec4 0, 0, 1;\n");
 	    return;
       }
 
-      for (idx = 0 ; idx < ivl_type_properties(cls) ; idx += 1) {
-	    ivl_type_t ptype;
-	    ivl_variable_type_t pbase;
-	    unsigned wid;
+      /* No constraints: single fill, always succeed (legacy path). */
+      if (ncons == 0) {
+	    draw_eval_object(obj);
+	    for (idx = 0 ; idx < ivl_type_properties(cls) ; idx += 1) {
+		  ivl_type_t ptype;
+		  ivl_variable_type_t pbase;
+		  unsigned wid;
 
-	    if (ivl_type_prop_rand(cls, idx) == 0)
-		  continue;
+		  if (ivl_type_prop_rand(cls, idx) == 0)
+			continue;
 
-	    ptype = ivl_type_prop_type(cls, idx);
-	    if (ptype == 0)
-		  continue;
-	    pbase = ivl_type_base(ptype);
-	    if (pbase != IVL_VT_BOOL && pbase != IVL_VT_LOGIC)
-		  continue;
+		  ptype = ivl_type_prop_type(cls, idx);
+		  if (ptype == 0)
+			continue;
+		  pbase = ivl_type_base(ptype);
+		  if (pbase != IVL_VT_BOOL && pbase != IVL_VT_LOGIC)
+			continue;
 
-	    wid = ivl_type_packed_width(ptype);
-	    if (wid == 0)
-		  wid = 1;
+		  wid = ivl_type_packed_width(ptype);
+		  if (wid == 0)
+			wid = 1;
 
-	    fprintf(vvp_out, "    %%urandom %u; randomize prop %s\n",
-		    wid, ivl_type_prop_name(cls, idx));
-	    if (pbase == IVL_VT_BOOL)
-		  fprintf(vvp_out, "    %%cast2;\n");
-	    fprintf(vvp_out, "    %%store/prop/v %d, %u;\n", idx, wid);
+		  fprintf(vvp_out, "    %%urandom %u; randomize prop %s\n",
+			  wid, ivl_type_prop_name(cls, idx));
+		  if (pbase == IVL_VT_BOOL)
+			fprintf(vvp_out, "    %%cast2;\n");
+		  fprintf(vvp_out, "    %%store/prop/v %d, %u;\n", idx, wid);
+	    }
+	    fprintf(vvp_out, "    %%pop/obj 1, 0;\n");
+	    if (leave_result)
+		  fprintf(vvp_out, "    %%pushi/vec4 1, 0, 1;\n");
+	    return;
       }
 
-      fprintf(vvp_out, "    %%pop/obj 1, 0;\n");
-      if (leave_result)
-	    fprintf(vvp_out, "    %%pushi/vec4 1, 0, 1;\n");
+      lab_retry = local_count++;
+      lab_check = local_count++;
+      lab_ok = local_count++;
+      lab_fail = local_count++;
+      {
+	    unsigned lab_done = local_count++;
+
+	    attempt_reg = allocate_word();
+	    limit_reg = allocate_word();
+
+	    fprintf(vvp_out, "    %%ix/load %d, 0, 0; randomize attempt\n",
+		    attempt_reg);
+	    fprintf(vvp_out, "    %%ix/load %d, 10000, 0; randomize max attempts\n",
+		    limit_reg);
+
+	    fprintf(vvp_out, "T_%u.%u ; randomize reject retry\n",
+		    thread_count, lab_retry);
+
+	    /* Fill all rand properties. */
+	    draw_eval_object(obj);
+	    for (idx = 0 ; idx < ivl_type_properties(cls) ; idx += 1) {
+		  ivl_type_t ptype;
+		  ivl_variable_type_t pbase;
+		  unsigned wid;
+
+		  if (ivl_type_prop_rand(cls, idx) == 0)
+			continue;
+
+		  ptype = ivl_type_prop_type(cls, idx);
+		  if (ptype == 0)
+			continue;
+		  pbase = ivl_type_base(ptype);
+		  if (pbase != IVL_VT_BOOL && pbase != IVL_VT_LOGIC)
+			continue;
+
+		  wid = ivl_type_packed_width(ptype);
+		  if (wid == 0)
+			wid = 1;
+
+		  fprintf(vvp_out, "    %%urandom %u; randomize prop %s\n",
+			  wid, ivl_type_prop_name(cls, idx));
+		  if (pbase == IVL_VT_BOOL)
+			fprintf(vvp_out, "    %%cast2;\n");
+		  fprintf(vvp_out, "    %%store/prop/v %d, %u;\n", idx, wid);
+	    }
+	    fprintf(vvp_out, "    %%pop/obj 1, 0;\n");
+
+	    /* Evaluate constraints; any failure jumps to next attempt. */
+	    fprintf(vvp_out, "T_%u.%u ; randomize check constraints\n",
+		    thread_count, lab_check);
+	    for (cidx = 0 ; cidx < ncons ; cidx += 1) {
+		  int use_flag;
+		  if (cons[cidx] == 0)
+			continue;
+		  use_flag = draw_eval_condition(cons[cidx]);
+		  fprintf(vvp_out, "    %%jmp/0xz T_%u.%u, %d; constraint fail\n",
+			  thread_count, lab_fail, use_flag);
+		  clr_flag(use_flag);
+	    }
+	    fprintf(vvp_out, "    %%jmp T_%u.%u; constraints ok\n",
+		    thread_count, lab_ok);
+
+	    fprintf(vvp_out, "T_%u.%u ; randomize attempt failed\n",
+		    thread_count, lab_fail);
+	    fprintf(vvp_out, "    %%ix/add %d, 1, 0;\n", attempt_reg);
+	    fprintf(vvp_out, "    %%cmpix/ltu %d, %d;\n", attempt_reg, limit_reg);
+	    fprintf(vvp_out, "    %%jmp/1 T_%u.%u, 4; retry\n",
+		    thread_count, lab_retry);
+	    /* Exhausted attempts: return 0 */
+	    if (leave_result)
+		  fprintf(vvp_out, "    %%pushi/vec4 0, 0, 1;\n");
+	    fprintf(vvp_out, "    %%jmp T_%u.%u;\n", thread_count, lab_done);
+
+	    fprintf(vvp_out, "T_%u.%u ; randomize success\n",
+		    thread_count, lab_ok);
+	    if (leave_result)
+		  fprintf(vvp_out, "    %%pushi/vec4 1, 0, 1;\n");
+	    fprintf(vvp_out, "T_%u.%u ;\n", thread_count, lab_done);
+
+	    clr_word(attempt_reg);
+	    clr_word(limit_reg);
+      }
 }
 
 /*
@@ -1365,13 +1457,23 @@ static void draw_sfunc_vec4(ivl_expr_t expr)
 	    return;
       }
 
-      /* Unconstrained class.randomize(): fill rand/randc integral props. */
+      /* Class.randomize(): fill rand props; optional constraint rejection. */
       if (strcmp(ivl_expr_name(expr), "$ivl_randomize") == 0) {
 	    ivl_expr_t obj = (parm_count > 0) ? ivl_expr_parm(expr, 0) : 0;
-	    if (obj)
-		  draw_ivl_randomize(obj, 1);
-	    else
+	    if (obj) {
+		  unsigned ncons = (parm_count > 1) ? (parm_count - 1) : 0;
+		  ivl_expr_t*cons = 0;
+		  unsigned i;
+		  if (ncons > 0) {
+			cons = (ivl_expr_t*)calloc(ncons, sizeof(ivl_expr_t));
+			for (i = 0 ; i < ncons ; i += 1)
+			      cons[i] = ivl_expr_parm(expr, i + 1);
+		  }
+		  draw_ivl_randomize(obj, ncons, cons, 1);
+		  free(cons);
+	    } else {
 		  fprintf(vvp_out, "    %%pushi/vec4 0, 0, 1;\n");
+	    }
 	    if (ivl_expr_width(expr) > 1)
 		  fprintf(vvp_out, "    %%pad/u %u;\n", ivl_expr_width(expr));
 	    return;
