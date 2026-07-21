@@ -21,7 +21,7 @@ Last updated: 2026-07-21
 | Constraints / randomize | **Partial** on `feat/constraints-reject`: unconstrained `rand`/`randc` plus hard relational constraints via rejection sampling (`constraint {}`, `randomize() with`). See [`docs/constraints.md`](constraints.md), [`docs/randomize.md`](randomize.md), [`examples/constraints`](../examples/constraints). |
 | `$cast` / `$typename` | **Partial** on `feat/cast-typename`: class-handle `$cast` (dynamic is-a + assign); static `$typename` → `"class <name>"` etc. See [`docs/cast-typename.md`](cast-typename.md) and [`examples/cast_typename`](../examples/cast_typename). |
 | Covergroups | **Partial** on `feat/covergroup`: embedded `covergroup`/`coverpoint`/`bins`, `sample()`, `get_inst_coverage()` percentage. See [`docs/covergroup.md`](covergroup.md) and [`examples/covergroup`](../examples/covergroup). |
-| DPI | Missing |
+| DPI-C | **Partial** on `feat/dpi-c`: `import "DPI-C" function` with scalar `int`; load `.so` via `vvp -d`. See [`docs/dpi.md`](dpi.md) and [`examples/dpi`](../examples/dpi). |
 
 ## Remotes
 

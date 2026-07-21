@@ -291,6 +291,15 @@ extern PTask*pform_push_task_scope(const struct vlltype&loc, const char*name,
 extern PFunction*pform_push_function_scope(const struct vlltype&loc, const char*name,
 					   LexicalScope::lifetime_t lifetime);
 
+	/* import "DPI-C" function ... ; — creates a DPI-imported PFunction.
+	   Call begin before parsing ports, finish after the port list. */
+extern void pform_dpi_import_begin(const struct vlltype&loc,
+				   char*dpi_spec,
+				   data_type_t*return_type,
+				   char*func_name,
+				   char*c_name);
+extern void pform_dpi_import_finish(std::vector<pform_tf_port_t>*ports);
+
 extern PBlock*pform_push_block_scope(const struct vlltype&loc, const char*name,
 				     PBlock::BL_TYPE tt);
 

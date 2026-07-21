@@ -1189,6 +1189,8 @@ void PFunction::dump(ostream&out, unsigned ind) const
 {
       out << setw(ind) << "" << "function ";
       if (is_auto_) out << "automatic ";
+      if (is_dpi_import())
+	    out << "/* DPI-C import \"" << dpi_c_name_ << "\" */ ";
 
       out << pscope_name() << ";" << endl;
       if (method_of())

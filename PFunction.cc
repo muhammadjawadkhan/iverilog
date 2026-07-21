@@ -25,7 +25,7 @@
 using namespace std;
 
 PFunction::PFunction(perm_string name, LexicalScope*parent, bool is_auto__)
-: PTaskFunc(name, parent), statement_(0)
+: PTaskFunc(name, parent), statement_(0), dpi_c_name_()
 {
       is_auto_ = is_auto__;
       return_type_ = 0;

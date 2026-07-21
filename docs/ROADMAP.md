@@ -12,7 +12,7 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
 6. **Constraints + `randomize()` / `randomize() with`** — **partial** (hard relational constraints via rejection sampling; see [constraints.md](constraints.md) / [randomize.md](randomize.md)); soft/dist/solver still missing
 7. **`$cast` / `$typename` hardening** for factory patterns — **partial** (class-handle `$cast` + static `$typename`; see [cast-typename.md](cast-typename.md))
 8. **Covergroups** — functional coverage — **partial** (embedded coverpoint/bins + `sample`/`get_inst_coverage`; see [covergroup.md](covergroup.md))
-9. **DPI-C** — optional but common in real flows
+9. **DPI-C** — optional but common in real flows — **partial** (`import "DPI-C" function` + scalar int; see [dpi.md](dpi.md))
 
 ## Tier B — Library / methodology (on top of Tier A)
 
