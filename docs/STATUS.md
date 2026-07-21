@@ -22,6 +22,7 @@ Last updated: 2026-07-21
 | `$cast` / `$typename` | **Partial** on `feat/cast-typename`: class-handle `$cast` (dynamic is-a + assign); static `$typename` → `"class <name>"` etc. See [`docs/cast-typename.md`](cast-typename.md) and [`examples/cast_typename`](../examples/cast_typename). |
 | Covergroups | **Partial** on `feat/covergroup`: embedded `covergroup`/`coverpoint`/`bins`, `sample()`, `get_inst_coverage()` percentage. See [`docs/covergroup.md`](covergroup.md) and [`examples/covergroup`](../examples/covergroup). |
 | DPI-C | **Partial** on `feat/dpi-c`: `import "DPI-C" function` with scalar `int`; load `.so` via `vvp -d`. See [`docs/dpi.md`](dpi.md) and [`examples/dpi`](../examples/dpi). |
+| Factory | **Partial** on `feat/factory-slice`: name-based `uvm_factory` register / create / type-override; `uvm_object_wrapper` proxies; no `uvm_object_registry#(T)` yet. See [`docs/factory.md`](factory.md) and [`examples/factory`](../examples/factory). |
 
 ## Remotes
 

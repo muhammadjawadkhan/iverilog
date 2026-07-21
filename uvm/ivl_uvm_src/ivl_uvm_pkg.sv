@@ -39,6 +39,7 @@ package ivl_uvm_pkg;
   `include "base/uvm_misc.svh"
   `include "base/uvm_object.svh"
   `include "ivl_uvm_comps.svh"
+  `include "ivl_uvm_factory.svh"
   `include "ivl_uvm_mbx.svh"
   `include "ivl_uvm_tlm.svh"
 

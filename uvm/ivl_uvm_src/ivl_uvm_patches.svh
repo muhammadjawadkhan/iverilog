@@ -127,8 +127,27 @@
   endfunction : get_name 
 
   typedef class uvm_report_object;
+  typedef class uvm_component;
+  typedef class uvm_object;
 
+  // Accellera-shaped type proxy (Tier B factory slice).
+  // NOTE: Icarus does not dispatch virtual methods yet — use type_name
+  // property and $cast to concrete wrappers when calling create_*.
   class uvm_object_wrapper;
+    string type_name;
+    function new(string name = "<unknown>");
+      type_name = name;
+    endfunction
+    function string get_type_name();
+      return type_name;
+    endfunction
+    function uvm_object create_object(string name = "");
+      return null;
+    endfunction
+    function uvm_component create_component(string name,
+                                            uvm_component parent);
+      return null;
+    endfunction
   endclass : uvm_object_wrapper
   
   class uvm_objection;

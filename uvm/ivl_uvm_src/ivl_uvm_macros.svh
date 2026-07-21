@@ -64,6 +64,18 @@
     typedef class `IVL_UVM_MBX_T;
   `endif // IVL_UVM_MBX_T
 
+  // Lightweight Accellera-shaped utils (no uvm_object_registry#(T)).
+  // Still register a concrete uvm_object_wrapper with uvm_get_factory().
+  `define ivl_uvm_object_utils(TYPE) \
+    virtual function string get_type_name(); \
+      return `"TYPE`"; \
+    endfunction \
+    virtual function uvm_object create(string name=""); \
+      TYPE tmp; \
+      tmp = new(name); \
+      return tmp; \
+    endfunction
+
 `endif //  IVL_UVM_MACROS
 
 `include "uvm_macros.svh"

@@ -233,7 +233,9 @@ endfunction
 
 function uvm_object_wrapper get_object_type();
   if(get_type_name() == "<unknown>") return null;
-  `ifndef IVL_UVM
+  `ifdef IVL_UVM
+  return uvm_get_factory().find_by_name(get_type_name());
+  `else
   return factory.find_by_name(get_type_name());
   `endif // IVL_UVM
 endfunction
