@@ -188,6 +188,7 @@ extern bool of_SEM_TRY_GET(vthread_t thr, vvp_code_t code);
 extern bool of_COV_NEW(vthread_t thr, vvp_code_t code);
 extern bool of_COV_SAMPLE(vthread_t thr, vvp_code_t code);
 extern bool of_COV_GET_INST(vthread_t thr, vvp_code_t code);
+extern bool of_DPI_CALL(vthread_t thr, vvp_code_t code);
 extern bool of_BOX_VEC4(vthread_t thr, vvp_code_t code);
 extern bool of_UNBOX_VEC4(vthread_t thr, vvp_code_t code);
 extern bool of_URANDOM(vthread_t thr, vvp_code_t code);

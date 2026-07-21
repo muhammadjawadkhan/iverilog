@@ -23,6 +23,7 @@ const char COPYRIGHT[] =
 # include  "compile.h"
 # include  <cstdio>
 # include  <cstdlib>
+# include  <cstring>
 
 #if defined(HAVE_GETOPT_H)
 # include  <getopt.h>
@@ -33,6 +34,7 @@ const char COPYRIGHT[] =
 #endif
 
 #include "libvvp.h"
+#include "vvp_dpi.h"
 
 using namespace std;
 
@@ -47,13 +49,16 @@ bool version_flag = false;
 unsigned module_cnt = 0;
 const char*module_tab[64];
 
+unsigned dpi_cnt = 0;
+const char*dpi_tab[64];
+
 int main(int argc, char*argv[])
 {
       int opt;
       unsigned flag_errors = 0;
       const char *logfile_name = 0x0;
 
-      while ((opt = getopt(argc, argv, "+hil:M:m:nNqsvV")) != EOF) switch (opt) {
+      while ((opt = getopt(argc, argv, "+d:hil:M:m:nNqsvV")) != EOF) switch (opt) {
          case 'h':
            fprintf(stderr,
                    "Usage: vvp [options] input-file [+plusargs...]\n"
@@ -64,6 +69,7 @@ int main(int argc, char*argv[])
                    " -M path        VPI module directory\n"
 		   " -M -           Clear VPI module path\n"
                    " -m module      Load vpi module.\n"
+		   " -d path.so     Load DPI-C shared library (RTLD_GLOBAL).\n"
 		   " -n             Non-interactive ($stop = $finish).\n"
                    " -N             Same as -n, but exit code is 1 instead of 0\n"
 		   " -q             Quiet mode (suppress output on MCD bit 0).\n"
@@ -86,6 +92,10 @@ int main(int argc, char*argv[])
 	    break;
 	  case 'm':
 	    module_tab[module_cnt++] = optarg;
+	    break;
+	  case 'd':
+	    if (dpi_cnt < 64)
+		  dpi_tab[dpi_cnt++] = optarg;
 	    break;
 	  case 'n':
 	    vvp_set_stop_is_finish(true, 0);
@@ -140,6 +150,9 @@ int main(int argc, char*argv[])
       }
 
       vvp_init(logfile_name, argc - optind, argv + optind);
+
+      for (unsigned idx = 0 ;  idx < dpi_cnt ;  idx += 1)
+	    vpip_load_dpi_library(dpi_tab[idx]);
 
       for (unsigned idx = 0 ;  idx < module_cnt ;  idx += 1)
 	    vpip_load_module(module_tab[idx]);

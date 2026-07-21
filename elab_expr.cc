@@ -3714,6 +3714,19 @@ NetExpr* PECallFunction::elaborate_base_(Design*des, NetScope*scope, NetScope*ds
 	   return value is the name within that scope. */
 
       if (NetNet*res = dscope->find_signal(dscope->basename())) {
+	    const PFunction*pfunc = dscope->func_pform();
+	    if (pfunc && pfunc->is_dpi_import()) {
+		  string sname = string("$ivl_dpi_call$") + pfunc->dpi_c_name().str();
+		  ivl_type_t rtype = res->net_type();
+		  if (rtype == 0)
+			rtype = &netvector_t::atom2s32;
+		  NetESFunc*sys = new NetESFunc(sname.c_str(), rtype, parms.size());
+		  sys->set_line(*this);
+		  for (unsigned idx = 0 ; idx < parms.size() ; idx += 1)
+			sys->parm(idx, parms[idx]);
+		  return sys;
+	    }
+
 	    NetESignal*eres = new NetESignal(res);
 	    NetEUFunc*func = new NetEUFunc(scope, dscope, eres, parms, need_const);
 	    func->set_line(*this);

@@ -31,6 +31,7 @@
 # include  "vvp_vif.h"
 # include  "vvp_mailbox.h"
 # include  "vvp_covergroup.h"
+# include  "vvp_dpi.h"
 # include  "class_type.h"
 #ifdef CHECK_WITH_VALGRIND
 # include  "vvp_cleanup.h"
@@ -8724,5 +8725,42 @@ bool of_COV_GET_INST(vthread_t thr, vvp_code_t)
       vvp_covergroup*cg = cg_obj.peek<vvp_covergroup>();
       double r = cg ? cg->get_inst_coverage() : 0.0;
       thr->push_real(r);
+      return true;
+}
+
+/*
+ * %dpi/call "<c_name>", <nargs>
+ * Pop nargs int32 values from the vec4 stack (last arg on top) and
+ * call the imported C function; push a 32-bit result.
+ */
+bool of_DPI_CALL(vthread_t thr, vvp_code_t cp)
+{
+      const char*cname = cp->text ? cp->text : "";
+      unsigned nargs = cp->bit_idx[0];
+      int32_t args[8];
+
+      if (nargs > 8) {
+	    fprintf(stderr, "DPI: %%dpi/call \"%s\" nargs=%u exceeds 8.\n",
+		    cname, nargs);
+	    for (unsigned i = 0 ; i < nargs ; i += 1)
+		  thr->pop_vec4();
+	    thr->push_vec4(vvp_vector4_t(32, BIT4_0));
+	    return true;
+      }
+
+      for (unsigned i = 0 ; i < nargs ; i += 1) {
+	    vvp_vector4_t val = thr->pop_vec4();
+	    int32_t ival = 0;
+	    if (!vector4_to_value(val, ival, true, true))
+		  ival = 0;
+	    args[nargs - 1 - i] = ival;
+      }
+
+      int32_t result = vpip_dpi_call_i32(cname, nargs, args);
+
+      vvp_vector4_t out(32, BIT4_0);
+      unsigned long bits = static_cast<unsigned long>(static_cast<uint32_t>(result));
+      out.setarray(0, 32, &bits);
+      thr->push_vec4(out);
       return true;
 }

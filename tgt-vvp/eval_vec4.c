@@ -1489,6 +1489,23 @@ static void draw_sfunc_vec4(ivl_expr_t expr)
 	    return;
       }
 
+      /* DPI-C import call: $ivl_dpi_call$<c_name>(args...) */
+      if (strncmp(ivl_expr_name(expr), "$ivl_dpi_call$", 14) == 0) {
+	    const char*cname = ivl_expr_name(expr) + 14;
+	    unsigned idx;
+	    for (idx = 0 ; idx < parm_count ; idx += 1) {
+		  ivl_expr_t arg = ivl_expr_parm(expr, idx);
+		  if (arg)
+			draw_eval_vec4(arg);
+		  else
+			fprintf(vvp_out, "    %%pushi/vec4 0, 0, 32;\n");
+	    }
+	    fprintf(vvp_out, "    %%dpi/call \"%s\", %u;\n", cname, parm_count);
+	    if (ivl_expr_width(expr) > 32)
+		  fprintf(vvp_out, "    %%pad/u %u;\n", ivl_expr_width(expr));
+	    return;
+      }
+
       draw_vpi_func_call(expr);
 }
 

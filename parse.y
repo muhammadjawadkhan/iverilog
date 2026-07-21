@@ -1827,6 +1827,7 @@ data_declaration /* IEEE1800-2005: A.2.1.3 */
       { if ($3) pform_make_events(@2, $3);
       }
   | attribute_list_opt package_import_declaration
+  | attribute_list_opt dpi_import_export
   ;
 
 package_scope
@@ -2873,6 +2874,21 @@ package_export_item_list
   | package_export_item
   ;
 
+  /* Minimal DPI-C import (IEEE 1800 dpi_import_export, import side only).
+     Push the function scope before parsing ports so they land in the
+     function, matching normal function_declaration. */
+dpi_import_export
+  : K_import STRING K_function data_type_or_implicit_or_void IDENTIFIER
+      { pform_dpi_import_begin(@1, $2, $4, $5, 0); }
+    '(' tf_port_list_opt ')' ';'
+      { pform_dpi_import_finish($8); }
+  | K_import STRING IDENTIFIER '=' K_function data_type_or_implicit_or_void
+    IDENTIFIER
+      { pform_dpi_import_begin(@1, $2, $6, $7, $3); }
+    '(' tf_port_list_opt ')' ';'
+      { pform_dpi_import_finish($10); }
+  ;
+
 package_item /* IEEE1800-2005 A.1.10 */
   : timeunits_declaration
   | parameter_declaration
@@ -3682,6 +3698,8 @@ block_item_decl_no_type_identifier_start
   /* Blocks can have imports. */
 
   | package_import_declaration
+
+  | dpi_import_export
 
   /* Recover from errors that happen within variable lists. Use the
      trailing semi-colon to resync the parser. */

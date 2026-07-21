@@ -127,6 +127,11 @@ class PFunction : public PTaskFunc {
       void set_statement(Statement *s);
       void set_return(data_type_t*t);
 
+	/* DPI-C import: C linkage name (null if not a DPI import). */
+      void set_dpi_c_name(perm_string n) { dpi_c_name_ = n; }
+      perm_string dpi_c_name() const { return dpi_c_name_; }
+      bool is_dpi_import() const { return ! dpi_c_name_.nil(); }
+
       inline Statement* get_statement() { return statement_; }
 
 	// Push this statement to the front of the existing
@@ -157,6 +162,7 @@ class PFunction : public PTaskFunc {
       data_type_t* return_type_;
       Statement *statement_;
       bool is_auto_;
+      perm_string dpi_c_name_;
 };
 
 // A let is like a simple function that is expanded in the compiler

@@ -715,6 +715,50 @@ PFunction* pform_push_function_scope(const struct vlltype&loc, const char*name,
       return func;
 }
 
+void pform_dpi_import_begin(const struct vlltype&loc,
+			    char*dpi_spec,
+			    data_type_t*return_type,
+			    char*func_name,
+			    char*c_name)
+{
+      pform_requires_sv(loc, "DPI-C import");
+
+      if (!dpi_spec || strcmp(dpi_spec, "DPI-C") != 0) {
+	    cerr << loc.get_fileline() << ": error: Only import \"DPI-C\" "
+		 << "is supported (got \""
+		 << (dpi_spec ? dpi_spec : "") << "\")." << endl;
+	    error_count += 1;
+	    delete[] dpi_spec;
+	    delete[] func_name;
+	    delete[] c_name;
+	    delete return_type;
+	      /* Still push a dummy scope so finish can pop. */
+	    pform_push_function_scope(loc, "dpi_error", LexicalScope::AUTOMATIC);
+	    return;
+      }
+      delete[] dpi_spec;
+
+      PFunction*func = pform_push_function_scope(loc, func_name,
+						 LexicalScope::AUTOMATIC);
+      func->set_return(return_type);
+
+      const char*use_c = c_name ? c_name : func_name;
+      func->set_dpi_c_name(lex_strings.make(use_c));
+
+      delete[] func_name;
+      delete[] c_name;
+}
+
+void pform_dpi_import_finish(std::vector<pform_tf_port_t>*ports)
+{
+      PFunction*func = dynamic_cast<PFunction*>(lexical_scope);
+      if (func)
+	    func->set_ports(ports);
+      else
+	    delete ports;
+      pform_pop_scope();
+}
+
 PBlock* pform_push_block_scope(const struct vlltype&loc, const char*name,
 			       PBlock::BL_TYPE bt)
 {
