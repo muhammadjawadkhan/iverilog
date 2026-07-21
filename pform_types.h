@@ -429,6 +429,10 @@ struct class_type_t : public data_type_t {
 	// without waiting for any constructor.
       std::vector<Statement*> initialize_static;
 
+	// Hard constraint predicate expressions from constraint blocks
+	// (rejection-sampling slice). Soft/dist/implication not stored.
+      std::vector<PExpr*> constraints;
+
       ivl_type_t elaborate_type_raw(Design*, NetScope*) const override;
 
       perm_string name;

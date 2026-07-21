@@ -2050,8 +2050,19 @@ static int show_system_task_call(ivl_statement_t net)
 
       if (strcmp(stmt_name, "$ivl_randomize") == 0) {
 	    ivl_expr_t obj = ivl_stmt_parm(net, 0);
-	    if (obj)
-		  draw_ivl_randomize(obj, 0);
+	    if (obj) {
+		  unsigned nparms = ivl_stmt_parm_count(net);
+		  unsigned ncons = (nparms > 1) ? (nparms - 1) : 0;
+		  ivl_expr_t*cons = 0;
+		  unsigned i;
+		  if (ncons > 0) {
+			cons = (ivl_expr_t*)calloc(ncons, sizeof(ivl_expr_t));
+			for (i = 0 ; i < ncons ; i += 1)
+			      cons[i] = ivl_stmt_parm(net, i + 1);
+		  }
+		  draw_ivl_randomize(obj, ncons, cons, 0);
+		  free(cons);
+	    }
 	    return 0;
       }
 

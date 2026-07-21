@@ -25,6 +25,7 @@
 # include  "property_qual.h"
 # include  <iostream>
 # include  <map>
+# include  <vector>
 
 class Design;
 class NetExpr;
@@ -123,6 +124,10 @@ class netclass_t : public ivl_type_s {
       void set_virtual(bool virtual_class) { virtual_class_ = virtual_class; }
       bool is_virtual() const { return virtual_class_; }
 
+	// Hard constraint predicates (PExprs kept from parse / class_type_t).
+      void set_constraints(const std::vector<PExpr*>& exprs);
+      const std::vector<PExpr*>& get_constraints() const { return constraints_; }
+
     protected:
       bool test_compatibility(ivl_type_t that) const override;
 
@@ -149,6 +154,9 @@ class netclass_t : public ivl_type_s {
       NetScope*definition_scope_;
 
       bool virtual_class_;
+
+	// Hard constraint expressions for rejection-sampling randomize().
+      std::vector<PExpr*> constraints_;
 };
 
 inline NetScope*netclass_t::definition_scope(void)

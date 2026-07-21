@@ -209,10 +209,11 @@ extern uint64_t get_number_immediate64(ivl_expr_t ex);
  */
 extern void draw_eval_vec4(ivl_expr_t ex);
 
-/* Emit unconstrained class randomize for $ivl_randomize(obj).
- * Leaves a 1-bit success flag on the vec4 stack when leave_result!=0;
- * otherwise pops the result (task form). */
-extern void draw_ivl_randomize(ivl_expr_t obj, int leave_result);
+/* Emit class randomize for $ivl_randomize(obj [, constraints...]).
+ * Constraints are 1-bit predicates; rejection sampling retries up to
+ * ~10000 times. Leaves a 1-bit success flag when leave_result!=0. */
+extern void draw_ivl_randomize(ivl_expr_t obj, unsigned ncons,
+			       ivl_expr_t*cons, int leave_result);
 
 /* Emit class-handle $cast as $ivl_cast(dest, src). Stores src into dest
  * when the dynamic type is compatible; leaves 1-bit ok when leave_result. */

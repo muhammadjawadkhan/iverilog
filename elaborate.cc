@@ -4691,14 +4691,38 @@ NetProc* PCallTask::elaborate_method_(Design*des, NetScope*scope,
 		  }
 	    }
 	    if (method_name == perm_string::literal("randomize")) {
-		  static const std::vector<perm_string> no_parms;
 		  if (!parms_.empty()) {
 			cerr << get_fileline() << ": sorry: randomize() with "
 			     << "arguments is not supported yet." << endl;
 			des->errors += 1;
 		  }
-		  return elaborate_sys_task_method_(des, scope, net, method_name,
-						    "$ivl_randomize", no_parms);
+
+		  std::vector<PExpr*> preds = class_type->get_constraints();
+		  for (size_t i = 0 ; i < constraint_exprs_.size() ; i += 1)
+			preds.push_back(constraint_exprs_[i]);
+
+		  NetESignal*sig = new NetESignal(net);
+		  sig->set_line(*this);
+
+		  vector<NetExpr*>argv(1 + preds.size());
+		  argv[0] = sig;
+		  for (size_t i = 0 ; i < preds.size() ; i += 1) {
+			NetExpr*pred = elab_hard_constraint_pred(des, scope,
+								 class_type, net,
+								 preds[i], *this);
+			if (!pred) {
+			      delete sig;
+			      for (size_t j = 1 ; j <= i ; j += 1)
+				    delete argv[j];
+			      return 0;
+			}
+			argv[1 + i] = pred;
+		  }
+
+		  NetSTask*sys = new NetSTask("$ivl_randomize",
+					       IVL_SFUNC_AS_TASK_IGNORE, argv);
+		  sys->set_line(*this);
+		  return sys;
 	    }
 	    NetScope*task = class_type->method_from_name(method_name);
 	    if (task == 0) {
