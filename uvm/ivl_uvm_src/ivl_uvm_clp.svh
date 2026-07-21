@@ -431,22 +431,27 @@ module ivl_uvm_cmdline_processor;
   endfunction
 `endif // IVL_UVM
 
+  // Icarus does not codegen string case; use if/else string compares.
   function bit m_convert_verb(string verb_str, uvm_verbosity verb_enum);
-    case (verb_str)
-      "NONE"       : begin verb_enum = UVM_NONE;   return 1; end
-      "UVM_NONE"   : begin verb_enum = UVM_NONE;   return 1; end
-      "LOW"        : begin verb_enum = UVM_LOW;    return 1; end
-      "UVM_LOW"    : begin verb_enum = UVM_LOW;    return 1; end
-      "MEDIUM"     : begin verb_enum = UVM_MEDIUM; return 1; end
-      "UVM_MEDIUM" : begin verb_enum = UVM_MEDIUM; return 1; end
-      "HIGH"       : begin verb_enum = UVM_HIGH;   return 1; end
-      "UVM_HIGH"   : begin verb_enum = UVM_HIGH;   return 1; end
-      "FULL"       : begin verb_enum = UVM_FULL;   return 1; end
-      "UVM_FULL"   : begin verb_enum = UVM_FULL;   return 1; end
-      "DEBUG"      : begin verb_enum = UVM_DEBUG;  return 1; end
-      "UVM_DEBUG"  : begin verb_enum = UVM_DEBUG;  return 1; end
-      default      : begin                         return 0; end
-    endcase
+    if (verb_str == "NONE" || verb_str == "UVM_NONE") begin
+      verb_enum = UVM_NONE; return 1;
+    end
+    if (verb_str == "LOW" || verb_str == "UVM_LOW") begin
+      verb_enum = UVM_LOW; return 1;
+    end
+    if (verb_str == "MEDIUM" || verb_str == "UVM_MEDIUM") begin
+      verb_enum = UVM_MEDIUM; return 1;
+    end
+    if (verb_str == "HIGH" || verb_str == "UVM_HIGH") begin
+      verb_enum = UVM_HIGH; return 1;
+    end
+    if (verb_str == "FULL" || verb_str == "UVM_FULL") begin
+      verb_enum = UVM_FULL; return 1;
+    end
+    if (verb_str == "DEBUG" || verb_str == "UVM_DEBUG") begin
+      verb_enum = UVM_DEBUG; return 1;
+    end
+    return 0;
   endfunction
 
     // m_do_timeout_settings
