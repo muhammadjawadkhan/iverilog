@@ -18,6 +18,7 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
 
 10. Grow [`uvm/`](../uvm/) toward Accellera-shaped APIs: reporting, phases/objections, factory, `config_db`, TLM, sequences
     - **Factory** — **partial** (name-based register/create/override; see [factory.md](factory.md))
+    - **config_db** — **partial** (int/string exact match; see [config-db.md](config-db.md))
 11. Smoke: trimmed “hello UVM”, then larger Accellera UVM 1.2 slices as features land
 
 ## Already usable baseline (do not re-do first)
