@@ -143,6 +143,30 @@ void pform_class_constraint(const struct vlltype&loc,
       delete exprs;
 }
 
+void pform_class_covergroup(const struct vlltype&loc,
+			    perm_string name,
+			    std::list<coverpoint_pform_t*>*coverpoints)
+{
+      ivl_assert(loc, pform_cur_class);
+
+      covergroup_type_t*cg = new covergroup_type_t(name);
+      FILE_NAME(cg, loc);
+
+      if (coverpoints) {
+	    for (std::list<coverpoint_pform_t*>::iterator cur = coverpoints->begin()
+		       ; cur != coverpoints->end() ; ++cur) {
+		  if (*cur)
+			cg->coverpoints.push_back(**cur);
+		  delete *cur;
+	    }
+	    delete coverpoints;
+      }
+
+      pform_cur_class->type->properties[name]
+	    = class_type_t::prop_info_t(property_qualifier_t::make_none(), cg);
+      FILE_NAME(&pform_cur_class->type->properties[name], loc);
+}
+
 void pform_set_this_class(const struct vlltype&loc, PTaskFunc*net)
 {
       if (pform_cur_class == 0)

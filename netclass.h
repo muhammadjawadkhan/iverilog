@@ -128,6 +128,17 @@ class netclass_t : public ivl_type_s {
       void set_constraints(const std::vector<PExpr*>& exprs);
       const std::vector<PExpr*>& get_constraints() const { return constraints_; }
 
+	// Covergroup metadata (Tier A #8). Bins hold constant sample values;
+	// prop_idx is filled when constructing against an enclosing class.
+      struct cover_bin_t {
+	    perm_string name;
+	    perm_string var_name;
+	    std::vector<long> values;
+      };
+      void set_covergroup_bins(const std::vector<cover_bin_t>& bins);
+      bool is_covergroup() const { return covergroup_; }
+      const std::vector<cover_bin_t>& covergroup_bins() const { return cover_bins_; }
+
     protected:
       bool test_compatibility(ivl_type_t that) const override;
 
@@ -157,6 +168,9 @@ class netclass_t : public ivl_type_s {
 
 	// Hard constraint expressions for rejection-sampling randomize().
       std::vector<PExpr*> constraints_;
+
+      bool covergroup_;
+      std::vector<cover_bin_t> cover_bins_;
 };
 
 inline NetScope*netclass_t::definition_scope(void)

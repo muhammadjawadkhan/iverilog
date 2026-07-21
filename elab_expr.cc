@@ -1869,7 +1869,28 @@ unsigned PECallFunction::test_width_method_(Design*, NetScope*,
       }
 
       // Chained class methods: obj.m1().m2() — width is that of the last call.
+      // Also: c.cg.get_inst_coverage() where cg is an embedded covergroup.
       if (search_results.path_tail.size() > 1) {
+	    if (search_results.path_tail.size() == 2 && search_results.net) {
+		  const netclass_t*cls = dynamic_cast<const netclass_t*>(search_results.type);
+		  if (!cls && search_results.net->net_type())
+			cls = dynamic_cast<const netclass_t*>(search_results.net->net_type());
+		  if (cls) {
+			int pidx = cls->property_idx_from_name(search_results.path_tail.front().name);
+			if (pidx >= 0) {
+			      const netclass_t*cg = dynamic_cast<const netclass_t*>(cls->get_prop_type(pidx));
+			      if (cg && cg->is_covergroup()
+				  && search_results.path_tail.back().name
+				     == perm_string::literal("get_inst_coverage")) {
+				    expr_type_   = IVL_VT_REAL;
+				    expr_width_  = 1;
+				    min_width_   = 1;
+				    signed_flag_ = true;
+				    return 1;
+			      }
+			}
+		  }
+	    }
 	    if (search_results.net && search_results.net->data_type()==IVL_VT_CLASS) {
 		  const netclass_t* cur_class = dynamic_cast<const netclass_t*>(search_results.type);
 		  if (cur_class) {
@@ -4095,6 +4116,7 @@ NetExpr* PECallFunction::elaborate_expr_method_(Design*des, NetScope*scope,
       }
 
 	// e.g. c.q.size() — path_tail is {q, size}; q is a queue-typed property
+	// e.g. c.cg.get_inst_coverage() — cg is an embedded covergroup property
       if (search_results.path_tail.size() == 2) {
 	    const netclass_t*cls = dynamic_cast<const netclass_t*>(search_results.type);
 	    if (!cls && search_results.net && search_results.net->net_type()) {
@@ -4105,6 +4127,32 @@ NetExpr* PECallFunction::elaborate_expr_method_(Design*des, NetScope*scope,
 		  int pidx = cls->property_idx_from_name(prop_name);
 		  if (pidx >= 0) {
 			ivl_type_t ptype = cls->get_prop_type(pidx);
+			const netclass_t*cg_type = dynamic_cast<const netclass_t*>(ptype);
+			if (cg_type && cg_type->is_covergroup()) {
+			      NetEProperty*prop = new NetEProperty(search_results.net, pidx, nullptr);
+			      prop->set_line(*this);
+			      perm_string method_name = search_results.path_tail.back().name;
+			      if (method_name == perm_string::literal("get_inst_coverage")) {
+				    if (parms_.size() != 0) {
+					  cerr << get_fileline() << ": error: "
+					       << "get_inst_coverage() takes no arguments."
+					       << endl;
+					  des->errors += 1;
+				    }
+				    NetESFunc*sys = new NetESFunc("$ivl_covergroup$get_inst_coverage",
+								  &netreal_t::type_real, 1);
+				    sys->set_line(*this);
+				    sys->parm(0, prop);
+				    return sys;
+			      }
+			      if (method_name == perm_string::literal("sample")) {
+				    cerr << get_fileline() << ": error: "
+					 << "sample() is a task, not a function." << endl;
+				    des->errors += 1;
+				    delete prop;
+				    return 0;
+			      }
+			}
 			if (ptype &&
 			    (ptype->base_type() == IVL_VT_DARRAY ||
 			     ptype->base_type() == IVL_VT_QUEUE)) {
@@ -7805,6 +7853,58 @@ NetExpr* PENewClass::elaborate_expr_constructor_(Design*des, NetScope*scope,
 		  }
 		  delete obj;
 		  return sem;
+	    }
+	      // Embedded covergroup: cg = new; → $ivl_covergroup$new(this, bins...)
+	    if (gn_system_verilog() && ctype->is_covergroup()) {
+		  NetNet*this_net = scope->find_signal(perm_string::literal(THIS_TOKEN));
+		  if (this_net == 0) {
+			cerr << get_fileline() << ": error: "
+			     << "covergroup new() requires an enclosing class method."
+			     << endl;
+			des->errors += 1;
+			delete obj;
+			return 0;
+		  }
+		  const netclass_t*parent_cls =
+			dynamic_cast<const netclass_t*>(this_net->net_type());
+		  if (parent_cls == 0) {
+			cerr << get_fileline() << ": error: "
+			     << "covergroup new(): enclosing 'this' is not a class."
+			     << endl;
+			des->errors += 1;
+			delete obj;
+			return 0;
+		  }
+
+		  const std::vector<netclass_t::cover_bin_t>& bins =
+			ctype->covergroup_bins();
+		  std::vector<NetExpr*> args;
+		  NetESignal*parent = new NetESignal(this_net);
+		  parent->set_line(*this);
+		  args.push_back(parent);
+		  args.push_back(new NetEConst(verinum((uint64_t)bins.size(), 32)));
+		  for (size_t bi = 0 ; bi < bins.size() ; bi += 1) {
+			int pidx = parent_cls->property_idx_from_name(bins[bi].var_name);
+			if (pidx < 0) {
+			      cerr << get_fileline() << ": error: "
+				   << "coverpoint `" << bins[bi].var_name
+				   << "' is not a property of enclosing class `"
+				   << parent_cls->get_name() << "'." << endl;
+			      des->errors += 1;
+			      pidx = 0;
+			}
+			args.push_back(new NetEConst(verinum((uint64_t)pidx, 32)));
+			args.push_back(new NetEConst(verinum((uint64_t)bins[bi].values.size(), 32)));
+			for (size_t vi = 0 ; vi < bins[bi].values.size() ; vi += 1)
+			      args.push_back(new NetEConst(verinum((uint64_t)bins[bi].values[vi], 32)));
+		  }
+
+		  NetESFunc*cg = new NetESFunc("$ivl_covergroup$new", ctype, args.size());
+		  cg->set_line(*this);
+		  for (size_t i = 0 ; i < args.size() ; i += 1)
+			cg->parm(i, args[i]);
+		  delete obj;
+		  return cg;
 	    }
 	      // No constructor.
 	    if (parms_.size() > 0) {

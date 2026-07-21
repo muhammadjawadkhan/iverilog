@@ -843,6 +843,11 @@ Module::port_t *module_declare_interface_port(const YYLTYPE&loc, char *type,
       property_qualifier_t property_qualifier;
       PPackage*package;
 
+      coverpoint_pform_t* coverpoint;
+      std::list<coverpoint_pform_t*>* coverpoints;
+      cover_bin_pform_t* cover_bin;
+      std::list<cover_bin_pform_t*>* cover_bins;
+
       struct {
 	    char*text;
 	    typedef_t*type;
@@ -1108,6 +1113,11 @@ Module::port_t *module_declare_interface_port(const YYLTYPE&loc, char *type,
 %type <expr>  constraint_block_item constraint_expression
 %type <exprs> constraint_expression_list
 
+%type <coverpoints> covergroup_item_list covergroup_item_list_opt
+%type <coverpoint> covergroup_item
+%type <cover_bins> cover_bin_list cover_bin_list_opt
+%type <cover_bin> cover_bin_item
+
 %type <event_exprs> event_expression_list
 %type <event_expr> event_expression
 %type <event_statement> event_control
@@ -1284,6 +1294,110 @@ class_constraint /* IEEE1800-2005: A.1.8 */
   | constraint_declaration
   ;
 
+  /* Minimal covergroup vertical slice (Tier A #8). Embedded in class. */
+covergroup_declaration
+  : K_covergroup IDENTIFIER ';' covergroup_item_list_opt K_endgroup
+      { perm_string cname = lex_strings.make($2);
+	delete[]$2;
+	pform_class_covergroup(@1, cname, $4);
+      }
+  | K_covergroup IDENTIFIER error K_endgroup
+      { yyerror(@1, "error: Invalid covergroup declaration.");
+	delete[]$2;
+	yyerrok;
+      }
+  ;
+
+covergroup_item_list_opt
+  : covergroup_item_list { $$ = $1; }
+  | { $$ = 0; }
+  ;
+
+covergroup_item_list
+  : covergroup_item_list covergroup_item
+      { std::list<coverpoint_pform_t*>*tmp = $1;
+	if ($2)
+	      tmp->push_back($2);
+	$$ = tmp;
+      }
+  | covergroup_item
+      { std::list<coverpoint_pform_t*>*tmp = new std::list<coverpoint_pform_t*>;
+	if ($1)
+	      tmp->push_back($1);
+	$$ = tmp;
+      }
+  ;
+
+covergroup_item
+  : K_coverpoint IDENTIFIER '{' cover_bin_list_opt '}'
+      { coverpoint_pform_t*cp = new coverpoint_pform_t;
+	cp->var_name = lex_strings.make($2);
+	delete[]$2;
+	cp->bins = $4;
+	$$ = cp;
+      }
+  | K_coverpoint IDENTIFIER ';'
+      { yyerror(@1, "sorry: Auto-binned coverpoints are not supported yet.");
+	delete[]$2;
+	$$ = 0;
+      }
+  | K_cross error ';'
+      { yyerror(@1, "sorry: covergroup cross is not supported yet.");
+	$$ = 0;
+	yyerrok;
+      }
+  | error ';'
+      { yyerror(@1, "error: Invalid covergroup item.");
+	$$ = 0;
+	yyerrok;
+      }
+  ;
+
+cover_bin_list_opt
+  : cover_bin_list { $$ = $1; }
+  | { $$ = 0; }
+  ;
+
+cover_bin_list
+  : cover_bin_list cover_bin_item
+      { std::list<cover_bin_pform_t*>*tmp = $1;
+	if ($2)
+	      tmp->push_back($2);
+	$$ = tmp;
+      }
+  | cover_bin_item
+      { std::list<cover_bin_pform_t*>*tmp = new std::list<cover_bin_pform_t*>;
+	if ($1)
+	      tmp->push_back($1);
+	$$ = tmp;
+      }
+  ;
+
+cover_bin_item
+  : K_bins IDENTIFIER '=' '{' expression_list_proper '}' ';'
+      { cover_bin_pform_t*b = new cover_bin_pform_t;
+	b->name = lex_strings.make($2);
+	delete[]$2;
+	b->values = $5;
+	$$ = b;
+      }
+  | K_illegal_bins error ';'
+      { yyerror(@1, "sorry: illegal_bins is not supported yet.");
+	$$ = 0;
+	yyerrok;
+      }
+  | K_ignore_bins error ';'
+      { yyerror(@1, "sorry: ignore_bins is not supported yet.");
+	$$ = 0;
+	yyerrok;
+      }
+  | error ';'
+      { yyerror(@1, "error: Invalid coverpoint bins item.");
+	$$ = 0;
+	yyerrok;
+      }
+  ;
+
   // This is used in places where a new type can be declared or an existig type
   // is referenced. E.g. typedefs.
 identifier_name
@@ -1382,6 +1496,8 @@ class_item /* IEEE1800-2005: A.1.8 */
     /* Class constraints... */
 
   | class_constraint
+
+  | covergroup_declaration
 
     /* Here are some error matching rules to help recover from various
        syntax errors within a class declaration. */

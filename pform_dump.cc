@@ -367,6 +367,12 @@ void virtual_interface_type_t::pform_dump(ostream&out, unsigned indent) const
       out << endl;
 }
 
+void covergroup_type_t::pform_dump(ostream&out, unsigned indent) const
+{
+      out << setw(indent) << "" << "covergroup " << name
+	  << " (" << coverpoints.size() << " coverpoints)" << endl;
+}
+
 void class_type_t::pform_dump_init(ostream&out, unsigned indent) const
 {
       for (vector<Statement*>::const_iterator cur = initialize.begin()

@@ -4401,6 +4401,16 @@ NetProc* PCallTask::elaborate_method_(Design*des, NetScope*scope,
 		  int pidx = cls->property_idx_from_name(prop_name);
 		  if (pidx >= 0) {
 			ivl_type_t ptype = cls->get_prop_type(pidx);
+			const netclass_t*cg_type = dynamic_cast<const netclass_t*>(ptype);
+			if (cg_type && cg_type->is_covergroup()) {
+			      if (method_name == perm_string::literal("sample")) {
+				    static const std::vector<perm_string> no_parms;
+				    return elaborate_sys_task_property_method_(des, scope, net, pidx,
+									       method_name,
+									       "$ivl_covergroup$sample",
+									       no_parms);
+			      }
+			}
 			if (ptype &&
 			    (dynamic_cast<const netqueue_t*>(ptype) ||
 			     ptype->base_type() == IVL_VT_DARRAY)) {
