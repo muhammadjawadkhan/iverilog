@@ -150,8 +150,7 @@
     endfunction
   endclass : uvm_object_wrapper
   
-  class uvm_objection;
-  endclass
+  typedef class uvm_objection;
   class uvm_printer;
   endclass
   class uvm_recorder;

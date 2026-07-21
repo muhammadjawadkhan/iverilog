@@ -14,8 +14,8 @@
 // 
 // This program is distributed in the hope that it will be 
 // useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 // 
 // You should have received a copy of the GNU General Public
 // License along with this work; if not, write to the Free Software
@@ -41,16 +41,75 @@ class uvm_report_object extends uvm_object;
 endclass : uvm_report_object 
 
 class uvm_phase extends uvm_object;
+  uvm_objection phase_done;
+
   function new (string name = "uvm_phase");
     super.new (name);
+    phase_done = new({name, ".phase_done"});
   endfunction : new 
 
+  function void raise_objection(int count = 1);
+    uvm_objection od;
+    od = phase_done;
+    od.raise_objection(count);
+  endfunction
+
+  function void drop_objection(int count = 1);
+    uvm_objection od;
+    od = phase_done;
+    od.drop_objection(count);
+  endfunction
+
+  function int get_objection_total();
+    uvm_objection od;
+    int n;
+    od = phase_done;
+    n = od.get_objection_total();
+    return n;
+  endfunction
+
+  task wait_for_objections_drop();
+    uvm_objection od;
+    od = phase_done;
+    od.wait_for_total_count(0);
+  endtask
 endclass : uvm_phase 
 
 virtual class uvm_component extends uvm_report_object;
+  local uvm_component m_parent;
+  local uvm_component m_children[`IVL_UVM_MAX_CHILDREN];
+  local int m_num_children;
+
   function new (string name = "uvm_component", uvm_component parent);
     super.new (name);
+    m_parent = parent;
+    m_num_children = 0;
+    if (parent != null)
+      parent.m_add_child(this);
   endfunction : new 
+
+  local function void m_add_child(uvm_component child);
+    if (m_num_children >= `IVL_UVM_MAX_CHILDREN) begin
+      $display("UVM_ERROR @ 0: reporter [COMP] child table full");
+      return;
+    end
+    m_children[m_num_children] = child;
+    m_num_children++;
+  endfunction
+
+  function uvm_component get_parent();
+    return m_parent;
+  endfunction
+
+  function int get_num_children();
+    return m_num_children;
+  endfunction
+
+  function uvm_component get_child(int idx);
+    if (idx < 0 || idx >= m_num_children)
+      return null;
+    return m_children[idx];
+  endfunction
 
   virtual function void build_phase(uvm_phase phase);
     `g2u_display ("build_phase", UVM_HIGH)
@@ -81,19 +140,57 @@ virtual class uvm_component extends uvm_report_object;
   virtual function void final_phase(uvm_phase phase);
   endfunction : final_phase
 
+  // Top-down function phases on this subtree (exact static types when
+  // called on concrete roots). Child overrides need virtual dispatch.
+  function void ivl_uvm_apply_func_phase(string which, uvm_phase phase);
+    int i;
+    uvm_component ch;
+    if (which == "build")
+      build_phase(phase);
+    else if (which == "connect")
+      connect_phase(phase);
+    else if (which == "end_of_elaboration")
+      end_of_elaboration_phase(phase);
+    else if (which == "start_of_simulation")
+      start_of_simulation_phase(phase);
+    else if (which == "extract")
+      extract_phase(phase);
+    else if (which == "check")
+      check_phase(phase);
+    else if (which == "report")
+      report_phase(phase);
+    else if (which == "final")
+      final_phase(phase);
+
+    for (i = 0; i < m_num_children; i++) begin
+      ch = m_children[i];
+      ch.ivl_uvm_apply_func_phase(which, phase);
+    end
+  endfunction
+
   virtual task ivl_uvm_run_all_phases ();
     uvm_phase u_ph_0;
+    int i;
+    uvm_component ch;
 
-    u_ph_0 = new();
-    this.build_phase (u_ph_0);
-    this.connect_phase (u_ph_0);
-    this.end_of_elaboration_phase (u_ph_0);
-    this.start_of_simulation_phase (u_ph_0);
-    this.run_phase (u_ph_0);
-    this.extract_phase (u_ph_0);
-    this.check_phase (u_ph_0);
-    this.report_phase (u_ph_0);
-    this.final_phase (u_ph_0);
+    u_ph_0 = new("common");
+    ivl_uvm_apply_func_phase("build", u_ph_0);
+    ivl_uvm_apply_func_phase("connect", u_ph_0);
+    ivl_uvm_apply_func_phase("end_of_elaboration", u_ph_0);
+    ivl_uvm_apply_func_phase("start_of_simulation", u_ph_0);
+
+    // run_phase: this component, then children (fork-free sequential).
+    run_phase(u_ph_0);
+    for (i = 0; i < m_num_children; i++) begin
+      ch = m_children[i];
+      ch.run_phase(u_ph_0);
+    end
+    u_ph_0.wait_for_objections_drop();
+
+    ivl_uvm_apply_func_phase("extract", u_ph_0);
+    ivl_uvm_apply_func_phase("check", u_ph_0);
+    ivl_uvm_apply_func_phase("report", u_ph_0);
+    ivl_uvm_apply_func_phase("final", u_ph_0);
   endtask : ivl_uvm_run_all_phases 
 
 endclass : uvm_component
@@ -112,5 +209,3 @@ class ivl_uvm_default_test extends uvm_test;
     super.new(name, parent);
   endfunction
 endclass : ivl_uvm_default_test
-
-

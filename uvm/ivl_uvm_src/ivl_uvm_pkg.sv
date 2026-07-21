@@ -38,6 +38,7 @@ package ivl_uvm_pkg;
   `include "ivl_uvm_msg.svh"
   `include "base/uvm_misc.svh"
   `include "base/uvm_object.svh"
+  `include "ivl_uvm_phases.svh"
   `include "ivl_uvm_comps.svh"
   `include "ivl_uvm_factory.svh"
   `include "ivl_uvm_config_db.svh"
