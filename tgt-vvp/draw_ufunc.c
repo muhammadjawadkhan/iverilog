@@ -103,10 +103,18 @@ static void draw_send_function_argument(ivl_signal_t port)
       }
 }
 
+static int is_class_method(ivl_scope_t def)
+{
+      ivl_scope_t parent = ivl_scope_parent(def);
+      return parent && ivl_scope_type(parent) == IVL_SCT_CLASS;
+}
+
 static void draw_ufunc_preamble(ivl_expr_t expr)
 {
       ivl_scope_t def = ivl_expr_def(expr);
       unsigned idx;
+      int virt = is_class_method(def);
+      const char*callf = virt ? "callf/virt" : "callf";
 
         /* If this is an automatic function, allocate the local storage. */
       if (ivl_scope_is_auto(def)) {
@@ -132,26 +140,26 @@ static void draw_ufunc_preamble(ivl_expr_t expr)
 	/* Call the function */
       switch (ivl_expr_value(expr)) {
 	  case IVL_VT_VOID:
-	    fprintf(vvp_out, "    %%callf/void TD_%s", vvp_mangle_id(ivl_scope_name(def)));
+	    fprintf(vvp_out, "    %%%s/void TD_%s", callf, vvp_mangle_id(ivl_scope_name(def)));
 	    fprintf(vvp_out, ", S_%p;\n", def);
 	    break;
 	  case IVL_VT_REAL:
-	    fprintf(vvp_out, "    %%callf/real TD_%s", vvp_mangle_id(ivl_scope_name(def)));
+	    fprintf(vvp_out, "    %%%s/real TD_%s", callf, vvp_mangle_id(ivl_scope_name(def)));
 	    fprintf(vvp_out, ", S_%p;\n", def);
 	    break;
 	  case IVL_VT_BOOL:
 	  case IVL_VT_LOGIC:
-	    fprintf(vvp_out, "    %%callf/vec4 TD_%s", vvp_mangle_id(ivl_scope_name(def)));
+	    fprintf(vvp_out, "    %%%s/vec4 TD_%s", callf, vvp_mangle_id(ivl_scope_name(def)));
 	    fprintf(vvp_out, ", S_%p;\n", def);
 	    break;
 	  case IVL_VT_STRING:
-	    fprintf(vvp_out, "    %%callf/str TD_%s", vvp_mangle_id(ivl_scope_name(def)));
+	    fprintf(vvp_out, "    %%%s/str TD_%s", callf, vvp_mangle_id(ivl_scope_name(def)));
 	    fprintf(vvp_out, ", S_%p;\n", def);
 	    break;
 	  case IVL_VT_CLASS:
 	  case IVL_VT_DARRAY:
 	  case IVL_VT_QUEUE:
-	    fprintf(vvp_out, "    %%callf/obj TD_%s", vvp_mangle_id(ivl_scope_name(def)));
+	    fprintf(vvp_out, "    %%%s/obj TD_%s", callf, vvp_mangle_id(ivl_scope_name(def)));
 	    fprintf(vvp_out, ", S_%p;\n", def);
 	    break;
 	  default:

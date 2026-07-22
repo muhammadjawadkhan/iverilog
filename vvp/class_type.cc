@@ -419,6 +419,26 @@ bool class_type::is_a(const class_type*target) const
       return false;
 }
 
+void class_type::set_method(const string&name, vvp_code_t code)
+{
+      method_t m;
+      m.code = code;
+      methods_[name] = m;
+}
+
+const class_type::method_t* class_type::find_method(const string&name) const
+{
+      map<string,method_t>::const_iterator it = methods_.find(name);
+      if (it != methods_.end())
+	    return &it->second;
+      const class_type*sup = get_super();
+      if (sup)
+	    return sup->find_method(name);
+      return 0;
+}
+
+static map<string,class_type*> all_class_types;
+
 void class_type::set_property(size_t idx, const string&name, const string&type, uint64_t array_size)
 {
       assert(idx < properties_.size());
@@ -622,7 +642,16 @@ void compile_class_done(void)
       assert(compile_class);
       compile_class->finish_setup();
       scope->classes[compile_class->class_name()] = compile_class;
+      all_class_types[compile_class->class_name()] = compile_class;
       compile_class = 0;
+}
+
+class_type* class_type_find_by_name(const std::string&name)
+{
+      map<string,class_type*>::iterator it = all_class_types.find(name);
+      if (it == all_class_types.end())
+	    return 0;
+      return it->second;
 }
 
 #ifdef CHECK_WITH_VALGRIND

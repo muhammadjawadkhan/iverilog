@@ -29,6 +29,7 @@
 # include  "codes.h"
 # include  "schedule.h"
 # include  "vpi_priv.h"
+# include  "class_type.h"
 # include  "parse_misc.h"
 # include  "statistics.h"
 # include  "schedule.h"
@@ -120,6 +121,11 @@ static const struct opcode_table_s opcode_table[] = {
       { "%callf/real",      of_CALLF_REAL,      2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%callf/str",       of_CALLF_STR,       2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%callf/vec4",      of_CALLF_VEC4,      2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
+      { "%callf/virt/obj",  of_CALLF_VIRT_OBJ,  2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
+      { "%callf/virt/real", of_CALLF_VIRT_REAL, 2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
+      { "%callf/virt/str",  of_CALLF_VIRT_STR,  2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
+      { "%callf/virt/vec4", of_CALLF_VIRT_VEC4, 2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
+      { "%callf/virt/void", of_CALLF_VIRT_VOID, 2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%callf/void",      of_CALLF_VOID,      2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%cassign/link",    of_CASSIGN_LINK,    2,{OA_FUNC_PTR,OA_FUNC_PTR2,OA_NONE} },
       { "%cassign/vec4",    of_CASSIGN_VEC4,    1,{OA_FUNC_PTR,OA_NONE,     OA_NONE} },
@@ -818,6 +824,46 @@ void code_label_lookup(struct vvp_code_s *code, char *label, bool cptr2)
       res->code  = code;
 
       resolv_submit(res);
+}
+
+struct cmethod_resolv_list_s: public resolv_list_s {
+      explicit cmethod_resolv_list_s(char*lab, class_type*ct, char*mn)
+      : resolv_list_s(lab), clas(ct), mname(mn) { }
+      class_type*clas;
+      char*mname;
+      virtual bool resolve(bool mes) override;
+};
+
+bool cmethod_resolv_list_s::resolve(bool mes)
+{
+      symbol_value_t val = sym_get_value(sym_codespace, label());
+      if (val.ptr) {
+	    clas->set_method(mname, reinterpret_cast<vvp_code_t>(val.ptr));
+	    delete[] mname;
+	    return true;
+      }
+      if (mes)
+	    fprintf(stderr, "unresolved cmethod code label: %s\n", label());
+      return false;
+}
+
+void compile_cmethod(char*cname, char*mname, char*code_lab, char*scope_lab)
+{
+      class_type*ct = class_type_find_by_name(cname);
+      if (ct == 0) {
+	    fprintf(stderr, "VVP error: .cmethod for unknown class %s\n", cname);
+	    compile_errors += 1;
+	    delete[] cname;
+	    delete[] mname;
+	    free(code_lab);
+	    free(scope_lab);
+	    return;
+      }
+      struct cmethod_resolv_list_s*res
+	    = new struct cmethod_resolv_list_s(code_lab, ct, mname);
+      resolv_submit(res);
+      delete[] cname;
+      free(scope_lab);
 }
 
 struct code_array_resolv_list_s: public resolv_list_s {

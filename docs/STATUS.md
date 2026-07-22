@@ -27,6 +27,7 @@ Last updated: 2026-07-21
 | Phases / objections | **Partial** on `feat/phases-objections`: `uvm_objection`, phase objection hooks, component children. See [`docs/phases.md`](phases.md) and [`examples/phases`](../examples/phases). |
 | TLM | **Partial** on `feat/tlm-ports`: int `uvm_tlm_fifo` + blocking put/get ports. See [`docs/tlm.md`](tlm.md) and [`examples/tlm`](../examples/tlm). |
 | Sequences | **Partial** on `feat/tlm-ports`: `uvm_sequence` / `uvm_sequencer` via package mailbox. See [`docs/sequences.md`](sequences.md) and [`examples/sequences`](../examples/sequences). |
+| Virtual methods | **Partial** on `feat/virtual-methods`: runtime dispatch for class method calls through handles. See [`docs/virtual-methods.md`](virtual-methods.md) and [`examples/virtual_methods`](../examples/virtual_methods). |
 
 ## Remotes
 

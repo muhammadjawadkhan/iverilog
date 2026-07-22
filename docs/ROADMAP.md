@@ -22,6 +22,7 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
     - **Phases / objections** — **partial** (see [phases.md](phases.md))
     - **TLM** — **partial** (int put/get; see [tlm.md](tlm.md))
     - **Sequences** — **partial** (see [sequences.md](sequences.md))
+    - **Virtual methods** — **partial** (see [virtual-methods.md](virtual-methods.md))
 11. Smoke: trimmed “hello UVM”, then larger Accellera UVM 1.2 slices as features land
 
 ## Already usable baseline (do not re-do first)

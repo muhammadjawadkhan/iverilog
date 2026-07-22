@@ -21,7 +21,9 @@
 
 # include  <string>
 # include  <vector>
+# include  <map>
 # include  "vpi_priv.h"
+# include  "vthread.h"
 
 class class_property_t;
 class vvp_vector4_t;
@@ -37,6 +39,12 @@ class class_type : public __vpiHandle {
       struct inst_x;
       typedef inst_x*inst_t;
 
+	/* Virtual method table: name -> code. Storage stays with the
+	   statically elaborated callee scope. Walks super on miss. */
+      struct method_t {
+	    vvp_code_t code;
+      };
+
     public:
       explicit class_type(const std::string&nam, size_t nprop);
       ~class_type() override;
@@ -51,6 +59,9 @@ class class_type : public __vpiHandle {
       bool is_a(const class_type*target) const;
 	// Number of properties in the class definition.
       inline size_t property_count(void) const { return properties_.size(); }
+
+      void set_method(const std::string&name, vvp_code_t code);
+      const method_t* find_method(const std::string&name) const;
 
 	// Set the details about the property. This is used during
 	// parse of the .vvp file to fill in the details of the
@@ -90,6 +101,10 @@ class class_type : public __vpiHandle {
       };
       std::vector<prop_t> properties_;
       size_t instance_size_;
+
+      std::map<std::string, method_t> methods_;
 };
+
+extern class_type* class_type_find_by_name(const std::string&name);
 
 #endif /* IVL_class_type_H */
