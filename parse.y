@@ -1549,7 +1549,58 @@ class_item_qualifier_opt
   ;
 
 class_scope
-  : ps_type_identifier K_SCOPE_RES { $$ = $1; }
+  : ps_type_identifier K_SCOPE_RES
+      { lex_in_class_scope(pform_class_scope_from_type($1));
+	$$ = $1;
+      }
+  ;
+
+ps_type_identifier /* IEEE1800-2017: A.9.3 */
+ : TYPE_IDENTIFIER
+      { pform_set_type_referenced(@1, $1.text);
+	delete[]$1.text;
+	$$ = new typeref_t($1.type);
+	FILE_NAME($$, @1);
+      }
+  | package_scope TYPE_IDENTIFIER
+      { lex_in_package_scope(0);
+	$$ = new typeref_t($2.type, $1);
+	FILE_NAME($$, @2);
+	delete[] $2.text;
+      }
+  | class_scope TYPE_IDENTIFIER
+      { lex_in_class_scope(0);
+	$$ = new typeref_t($2.type,
+			   dynamic_cast<PScope*>(pform_class_scope_from_type($1)));
+	FILE_NAME($$, @2);
+	delete[] $2.text;
+      }
+  ;
+
+ps_type_identifier_dim /* IEEE1800-2017: A.9.3 */
+ : TYPE_IDENTIFIER dimensions_opt
+      { pform_set_type_referenced(@1, $1.text);
+	data_type_t*tmp = new typeref_t($1.type);
+	FILE_NAME(tmp, @1);
+	delete[]$1.text;
+	$$ = pform_make_parray_type(@2, tmp, $2);
+      }
+  | package_scope TYPE_IDENTIFIER dimensions_opt
+      { lex_in_package_scope(nullptr);
+	data_type_t*tmp = new typeref_t($2.type, $1);
+	FILE_NAME(tmp, @2);
+	$$ = pform_make_parray_type(@3, tmp, $3);
+	delete[]$2.text;
+      }
+  | class_scope TYPE_IDENTIFIER dimensions_opt
+      { lex_in_class_scope(nullptr);
+	data_type_t*tmp = new typeref_t($2.type,
+			   dynamic_cast<PScope*>(pform_class_scope_from_type($1)));
+	FILE_NAME(tmp, @2);
+	$$ = pform_make_parray_type(@3, tmp, $3);
+	delete[]$2.text;
+      }
+  ;
 
 class_new /* IEEE1800-2005 A.2.4 */
   : K_new argument_list_parens_opt
@@ -1828,39 +1879,6 @@ package_scope
   : PACKAGE_IDENTIFIER K_SCOPE_RES
       { lex_in_package_scope($1);
         $$ = $1;
-      }
-  ;
-
-  // Type identifiers with and without attached packed dimensions.
-ps_type_identifier /* IEEE1800-2017: A.9.3 */
- : TYPE_IDENTIFIER
-      { pform_set_type_referenced(@1, $1.text);
-	delete[]$1.text;
-	$$ = new typeref_t($1.type);
-	FILE_NAME($$, @1);
-      }
-  | package_scope TYPE_IDENTIFIER
-      { lex_in_package_scope(0);
-	$$ = new typeref_t($2.type, $1);
-	FILE_NAME($$, @2);
-	delete[] $2.text;
-      }
-  ;
-
-ps_type_identifier_dim /* IEEE1800-2017: A.9.3 */
- : TYPE_IDENTIFIER dimensions_opt
-      { pform_set_type_referenced(@1, $1.text);
-	data_type_t*tmp = new typeref_t($1.type);
-	FILE_NAME(tmp, @1);
-	delete[]$1.text;
-	$$ = pform_make_parray_type(@2, tmp, $2);
-      }
-  | package_scope TYPE_IDENTIFIER dimensions_opt
-      { lex_in_package_scope(nullptr);
-	data_type_t*tmp = new typeref_t($2.type, $1);
-	FILE_NAME(tmp, @2);
-	$$ = pform_make_parray_type(@3, tmp, $3);
-	delete[]$2.text;
       }
   ;
 
@@ -2573,6 +2591,16 @@ type_identifier_variable_decl_assignments_with_type
   | package_scope TYPE_IDENTIFIER dimensions_opt list_of_variable_decl_assignments
       { lex_in_package_scope(nullptr);
 	auto tmp = new typeref_t($2.type, $1);
+	FILE_NAME(tmp, @2);
+	delete[]$2.text;
+	$$.decl_assignments = $4;
+	$$.type = pform_make_parray_type(@3, tmp, $3);
+      }
+  /* Nested class typedef: `pkt::type_id w` */
+  | class_scope TYPE_IDENTIFIER dimensions_opt list_of_variable_decl_assignments
+      { lex_in_class_scope(nullptr);
+	auto tmp = new typeref_t($2.type,
+			   dynamic_cast<PScope*>(pform_class_scope_from_type($1)));
 	FILE_NAME(tmp, @2);
 	delete[]$2.text;
 	$$.decl_assignments = $4;

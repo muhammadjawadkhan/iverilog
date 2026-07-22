@@ -238,6 +238,7 @@ struct typeref_t : public data_type_t {
       std::ostream& debug_dump(std::ostream&out) const override;
 
       parmvalue_t* overrides() const { return overrides_; }
+      typedef_t* get_typedef() const { return type; }
 
 private:
       PScope *scope;

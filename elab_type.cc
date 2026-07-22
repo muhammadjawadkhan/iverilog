@@ -819,9 +819,17 @@ ivl_type_t typeref_t::elaborate_type_raw(Design*des, NetScope*s) const
 NetScope *typeref_t::find_scope(Design *des, NetScope *s) const
 {
         // If a scope has been specified use that as a starting point for the
-	// search
-      if (scope)
+	// search. Packages are looked up by name; class nested typedefs
+	// (TYPE::nested) use the class NetScope so find_typedef_scope works.
+      if (scope) {
+	    if (PClass*pc = dynamic_cast<PClass*>(scope)) {
+		  netclass_t*cls = s ? s->find_class(des, pc->pscope_name()) : 0;
+		  if (cls && cls->class_scope())
+			return const_cast<NetScope*>(cls->class_scope());
+		  return s;
+	    }
 	    s = des->find_package(scope->pscope_name());
+      }
 
       return s;
 }

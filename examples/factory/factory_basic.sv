@@ -21,13 +21,9 @@ module factory_basic;
     `ivl_uvm_object_utils(pkt_ext)
   endclass
 
-  // Module-level typedefs of the Accellera-shaped registry (nested
-  // `TYPE::type_id` scope resolution is not supported yet).
-  typedef uvm_object_registry#(pkt, "pkt")         pkt_type_id;
-  typedef uvm_object_registry#(pkt_ext, "pkt_ext") pkt_ext_type_id;
-
-  pkt_type_id        w_pkt;
-  pkt_ext_type_id    w_ext;
+  // Nested `TYPE::type_id` from `ivl_uvm_object_utils` (Accellera shape).
+  pkt::type_id       w_pkt;
+  pkt_ext::type_id   w_ext;
   uvm_factory        f;
   uvm_object         obj;
   pkt                p;

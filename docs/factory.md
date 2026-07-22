@@ -11,8 +11,7 @@ class pkt extends uvm_object;
   `ivl_uvm_object_utils(pkt)  // typedef type_id = uvm_object_registry#(pkt,"pkt")
 endclass
 
-typedef uvm_object_registry#(pkt, "pkt") pkt_type_id;
-pkt_type_id w_pkt = new;   // auto-registers with factory
+pkt::type_id w_pkt = new;   // auto-registers with factory
 obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 ```
 
@@ -27,10 +26,11 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 | `create_object_by_name` | Resolve + virtual `w.create_object(name)` |
 | `uvm_get_factory()` | Package singleton (`factory` handle) |
 | `` `ivl_uvm_object_utils(T) `` | Nested `type_id` typedef + `get_type_name` / `create` |
+| `TYPE::type_id` | Class nested typedef scope (`ps_type_identifier` via `class_scope`) |
 
 ## Gaps
 
-- No static `type_id::get()` / `TYPE::type_id` scope resolution yet (use module-level `typedef` of the registry)
+- No static `type_id::get()` yet (construct `TYPE::type_id id = new;` to register)
 - Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
 
