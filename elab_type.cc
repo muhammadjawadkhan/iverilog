@@ -260,6 +260,29 @@ static ivl_type_t specialize_class_type_(Design*des, NetScope*use_scope,
       cache[key] = use_class;
 
       use_class->elaborate_sig(des, pclass);
+
+	// Method `this` ports are typed via class_type_t::name → find_class
+	// (the generic). Retarget them to this specialization before
+	// elaborating method bodies (needed for property assigns / super.new).
+      for (map<perm_string,PFunction*>::iterator cur = pclass->funcs.begin()
+		 ; cur != pclass->funcs.end() ; ++ cur) {
+	    NetScope*method_scope = class_scope->child(hname_t(cur->first));
+	    if (method_scope == 0)
+		  continue;
+	    NetNet*var_this = method_scope->find_signal(perm_string::literal(THIS_TOKEN));
+	    if (var_this)
+		  var_this->set_data_type(use_class);
+      }
+      for (map<perm_string,PTask*>::iterator cur = pclass->tasks.begin()
+		 ; cur != pclass->tasks.end() ; ++ cur) {
+	    NetScope*method_scope = class_scope->child(hname_t(cur->first));
+	    if (method_scope == 0)
+		  continue;
+	    NetNet*var_this = method_scope->find_signal(perm_string::literal(THIS_TOKEN));
+	    if (var_this)
+		  var_this->set_data_type(use_class);
+      }
+
       use_class->elaborate(des, pclass);
 
       return use_class;

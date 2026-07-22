@@ -754,6 +754,9 @@ class NetNet  : public NetObj, public PortType {
       bool get_scalar() const;
 
       inline const ivl_type_s* net_type(void) const { return net_type_; }
+	/* Used when specializing parameterized classes so method
+	   `this` ports point at the specialized netclass_t. */
+      void set_data_type(ivl_type_t type) { net_type_ = type; }
       const netenum_t*enumeration(void) const;
       const netstruct_t*struct_type(void) const;
       const netdarray_t*darray_type(void) const;

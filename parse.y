@@ -1418,6 +1418,14 @@ class_declaration_extends_opt /* IEEE1800-2005: A.1.2 */
       { $$.type = $2;
 	$$.args = $3;
       }
+  | K_extends TYPE_IDENTIFIER type_parameter_value argument_list_parens_opt
+      { pform_set_type_referenced(@2, $2.text);
+	typeref_t*tmp = new typeref_t($2.type, $3);
+	FILE_NAME(tmp, @2);
+	delete[]$2.text;
+	$$.type = tmp;
+	$$.args = $4;
+      }
   |
       { $$ = {nullptr, nullptr};
       }

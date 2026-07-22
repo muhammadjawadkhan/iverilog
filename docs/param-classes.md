@@ -34,7 +34,7 @@ With defaults present, a bare instance like `box b;` elaborates using those defa
 
 ### Explicit specialization `C#(T)` (MVP)
 
-- Parse keeps `#(...)` on `typeref_t` (`box#(byte) b`, `typedef box#(byte) t`).
+- Parse keeps `#(...)` on `typeref_t` (`box#(byte) b`, `typedef box#(byte) t`, `extends box#(byte)`).
 - Elaboration lazily clones the class scope, force-overrides parameter ports (class params are otherwise non-overridable), evaluates, and elaborates methods.
 - Ordered and named overrides are accepted; identity is cached by a mangled type name.
 - Built-in `mailbox` / `semaphore` still ignore `#()`.
@@ -47,6 +47,7 @@ Smokes under [`examples/param_classes`](../examples/param_classes):
 | `box_special.sv` | `box#(byte)` → `$bits(val)==8` |
 | `box_typedef.sv` | `typedef box#(byte) byte_box` |
 | `box_multiparm.sv` | `box#(byte, 16)` and `box#(.T(byte), .W(4))` |
+| `box_extends.sv` | `class D extends box#(byte)` |
 | `plain_class.sv` | non-parameterized regression |
 
 ```bash
@@ -55,7 +56,7 @@ make -C examples/param_classes run
 
 ## TODO
 
-- [ ] `extends C#(T)` / inheritance + parameters interactions as needed by UVM.
+- [ ] Richer inheritance + parameters interactions as needed by Accellera UVM.
 - [ ] Broader ivtest coverage beyond the local smoke examples.
 - [ ] Accellera-shaped `uvm_*#(T)` registries (needs this path + more).
 
