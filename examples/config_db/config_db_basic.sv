@@ -1,12 +1,32 @@
-// Tier B #2 smoke: uvm_config_db#(int):: and uvm_config_db#(string,1):: API.
+// Tier B #2 smoke: uvm_config_db#(int)::, uvm_config_db#(string,1)::, and
+// uvm_config_db_object#(T):: object-handle API.
 `timescale 1ns/1ps
+
+// User classes live in their own package that imports the UVM package (the
+// idiomatic pattern). A class defined at $unit scope that extends a package
+// base is not currently supported by the elaborator.
+package cfg_pkg;
+  import ivl_uvm_pkg::*;
+  class cfg_item extends uvm_object;
+    int payload;
+    function new(string name = "cfg_item");
+      super.new(name);
+    endfunction
+    virtual function string get_type_name();
+      return "cfg_item";
+    endfunction
+  endclass
+endpackage
 
 module config_db_basic;
   import ivl_uvm_pkg::*;
+  import cfg_pkg::*;
 
   int  n;
   int  pass;
   string mode;
+  cfg_item obj_in;
+  cfg_item obj_out;
 
   initial begin
     pass = 1;
@@ -42,6 +62,29 @@ module config_db_basic;
     n = uvm_config_db#(int)::get("", "env.agent", "max_count");
     if (n !== 42) begin
       $display("FAIL: overwrite got %0d", n);
+      pass = 0;
+    end
+
+    // Object-handle resources.
+    obj_in = new("obj_in");
+    obj_in.payload = 99;
+    uvm_config_db_object#(cfg_item)::set("", "env.agent", "cfg", obj_in);
+    if (!uvm_config_db_object#(cfg_item)::exists("", "env.agent", "cfg")) begin
+      $display("FAIL: exists object");
+      pass = 0;
+    end
+    obj_out = uvm_config_db_object#(cfg_item)::get("", "env.agent", "cfg");
+    if (obj_out == null || obj_out.payload !== 99) begin
+      $display("FAIL: get object payload mismatch");
+      pass = 0;
+    end
+    else if (obj_out != obj_in) begin
+      $display("FAIL: get object handle mismatch");
+      pass = 0;
+    end
+
+    if (uvm_config_db_object#(cfg_item)::exists("", "env.agent", "missing")) begin
+      $display("FAIL: missing object should not exist");
       pass = 0;
     end
 

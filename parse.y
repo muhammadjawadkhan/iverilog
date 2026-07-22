@@ -3312,6 +3312,16 @@ data_type_or_implicit_or_void_plus_id
   : data_type_or_implicit_plus_id
       { $$ = $1;
       }
+  /* Parameterized return type: function R#(T) get(); (dedicated rule keeps
+     the '#(...)' specialization out of the general plus_id path, avoiding
+     conflicts with the delay '#' used elsewhere). */
+  | TYPE_IDENTIFIER type_parameter_value identifier_name
+      { pform_set_type_referenced(@1, $1.text);
+	typeref_t*tmp = new typeref_t($1.type, $2);
+	FILE_NAME(tmp, @1);
+	delete[]$1.text;
+	set_type_id_range($$, tmp, $3, @3, nullptr);
+      }
   | K_void identifier_name
       { void_type_t*tmp = new void_type_t;
 	FILE_NAME(tmp, @1);

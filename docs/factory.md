@@ -23,6 +23,7 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 | `TYPE::type_id::get()` | Returns `this_type` (no `$cast`); bare `m_inst = new` allocates specialization |
 | `TYPE::type_id::create(name)` | Static; typed `T` return via `get()` + virtual `create_object` |
 | `static R#(T[,Tname]) prop` | Class property with explicit `#()` specialization |
+| `static function R#(T[,Tname]) get()` | Parameterized method return type |
 | Class-handle `==` / `!=` | Identity compare via `%cmp/obj` |
 | `uvm_factory::register` | Name-keyed type table (fixed size, default 64) |
 | `find_by_name` | Lookup registered wrapper |
@@ -35,7 +36,6 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 
 ## Gaps
 
-- `static function R#(T) get()` return type still does not parse (use `typedef … this_type`)
 - Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
 

@@ -18,6 +18,17 @@ int    ivl_uvm_cfg_str_idx[string];
 string ivl_uvm_cfg_str_val[`IVL_UVM_CONFIG_DB_MAX_STRINGS];
 int    ivl_uvm_cfg_str_n;
 
+// ---- object resources: key -> index+1 into value table ----
+// Associative arrays / queues of class handles are not yet supported, so
+// object handles use the same fixed-array + string-index-AA scheme as the
+// string table. Values are stored as the base handle; typed get() $casts.
+`ifndef IVL_UVM_CONFIG_DB_MAX_OBJECTS
+  `define IVL_UVM_CONFIG_DB_MAX_OBJECTS 64
+`endif
+int        ivl_uvm_cfg_obj_idx[string];
+uvm_object ivl_uvm_cfg_obj_val[`IVL_UVM_CONFIG_DB_MAX_OBJECTS];
+int        ivl_uvm_cfg_obj_n;
+
 function automatic string ivl_uvm_cfg_make_key(string contxt,
                                                string inst_name,
                                                string field_name);
@@ -66,6 +77,34 @@ function automatic string ivl_uvm_cfg_get_string(string key);
   return ivl_uvm_cfg_str_val[idx-1];
 endfunction
 
+function automatic void ivl_uvm_cfg_put_object(string key, uvm_object value);
+  int idx;
+  idx = ivl_uvm_cfg_obj_idx[key];
+  if (idx != 0) begin
+    ivl_uvm_cfg_obj_val[idx-1] = value;
+    return;
+  end
+  if (ivl_uvm_cfg_obj_n >= `IVL_UVM_CONFIG_DB_MAX_OBJECTS) begin
+    $display("UVM_ERROR @ 0: reporter [CFGDB] object table full");
+    return;
+  end
+  ivl_uvm_cfg_obj_val[ivl_uvm_cfg_obj_n] = value;
+  ivl_uvm_cfg_obj_idx[key] = ivl_uvm_cfg_obj_n + 1;
+  ivl_uvm_cfg_obj_n++;
+endfunction
+
+function automatic bit ivl_uvm_cfg_has_object(string key);
+  return (ivl_uvm_cfg_obj_idx[key] != 0);
+endfunction
+
+function automatic uvm_object ivl_uvm_cfg_get_object(string key);
+  int idx;
+  idx = ivl_uvm_cfg_obj_idx[key];
+  if (idx == 0)
+    return null;
+  return ivl_uvm_cfg_obj_val[idx-1];
+endfunction
+
 // Accellera-shaped parameterized API.
 // Int:  uvm_config_db#(int)::set/get/exists
 // Str:  uvm_config_db#(string, 1)::set/get/exists  (IS_STR=1 selects string store)
@@ -103,6 +142,43 @@ class uvm_config_db #(type T = int, bit IS_STR = 0);
   endfunction
 
 endclass : uvm_config_db
+
+// Object-handle resources: uvm_config_db_object#(T)::set/get/exists.
+// Kept separate from uvm_config_db#(int/string) because a class-handle T
+// cannot share the int/string store branches (cross-branch type-check).
+// T must extend uvm_object; the base handle is stored and get() $casts it.
+// Note: get() returns the typed handle (or null) rather than Accellera's
+// `ref` out-parameter, because function ref/output ports are not yet
+// supported; use exists() to distinguish "absent" from a stored null.
+class uvm_config_db_object #(type T = uvm_object);
+
+  static function void set(string contxt, string inst_name, string field_name,
+                           T value);
+    string key;
+    key = ivl_uvm_cfg_make_key(contxt, inst_name, field_name);
+    ivl_uvm_cfg_put_object(key, value);
+  endfunction
+
+  static function bit exists(string contxt, string inst_name, string field_name);
+    string key;
+    key = ivl_uvm_cfg_make_key(contxt, inst_name, field_name);
+    return ivl_uvm_cfg_has_object(key);
+  endfunction
+
+  static function T get(string contxt, string inst_name, string field_name);
+    string key;
+    uvm_object tmp;
+    T value;
+    key = ivl_uvm_cfg_make_key(contxt, inst_name, field_name);
+    tmp = ivl_uvm_cfg_get_object(key);
+    if (tmp == null)
+      return null;
+    if ($cast(value, tmp))
+      return value;
+    return null;
+  endfunction
+
+endclass : uvm_config_db_object
 
 // Non-param instance helpers for older call sites.
 class ivl_uvm_config_db_box;

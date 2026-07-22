@@ -31,6 +31,7 @@
 # include  <cstring>
 # include  <cstdlib>
 # include  <sstream>
+# include  <set>
 # include  "ivl_assert.h"
 
 using namespace std;
@@ -244,12 +245,25 @@ NetScope*NetScope::find_typedef_scope(const Design*des, const typedef_t*type_i)
       ivl_assert(*this, type_i);
 
       NetScope *cur_scope = this;
+	// Guard against import cycles. A wildcard import at $unit whose target
+	// package has $unit as its parent otherwise bounces $unit->pkg->$unit
+	// forever (e.g. a $unit-scope class extending a package base class).
+      std::set<const NetScope*> visited;
       while (cur_scope) {
+	    if (!visited.insert(cur_scope).second)
+		  break;
+
 	    auto it = cur_scope->typedefs_.find(type_i->name);
 	    if (it != cur_scope->typedefs_.end() && it->second == type_i)
 		  return cur_scope;
+
+	      // Class names are registered as classes, not typedefs. When the
+	      // definition is visible in this scope, match it by name too.
+	    if (cur_scope->classes_.find(type_i->name) != cur_scope->classes_.end())
+		  return cur_scope;
+
 	    NetScope*import_scope = cur_scope->find_import(des, type_i->name);
-	    if (import_scope)
+	    if (import_scope && visited.find(import_scope) == visited.end())
 		  cur_scope = import_scope;
 	    else if (cur_scope == unit_)
 		  return 0;
