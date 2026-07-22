@@ -34,7 +34,7 @@ With defaults present, a bare instance like `box b;` elaborates using those defa
 
 ### Explicit specialization `C#(T)` (MVP)
 
-- Parse keeps `#(...)` on `typeref_t` (`box#(byte) b`, `typedef box#(byte) t`, `extends C#(T)`).
+- Parse keeps `#(...)` on `typeref_t` (`box#(byte) b`, `typedef box#(byte) t`).
 - Elaboration lazily clones the class scope, force-overrides parameter ports (class params are otherwise non-overridable), evaluates, and elaborates methods.
 - Ordered and named overrides are accepted; identity is cached by a mangled type name.
 - Built-in `mailbox` / `semaphore` still ignore `#()`.
@@ -55,7 +55,7 @@ make -C examples/param_classes run
 
 ## TODO
 
-- [ ] Inheritance + parameters interactions as needed by UVM base classes.
+- [ ] `extends C#(T)` / inheritance + parameters interactions as needed by UVM.
 - [ ] Broader ivtest coverage beyond the local smoke examples.
 - [ ] Accellera-shaped `uvm_*#(T)` registries (needs this path + more).
 
