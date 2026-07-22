@@ -17,13 +17,14 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
 ## Tier B — Library / methodology (on top of Tier A)
 
 10. Grow [`uvm/`](../uvm/) toward Accellera-shaped APIs: reporting, phases/objections, factory, `config_db`, TLM, sequences
-    - **Factory** — **partial** (name-based register/create/override; see [factory.md](factory.md))
+    - **Factory** — **partial** (name-based register/create/override + virtual create; see [factory.md](factory.md))
     - **config_db** — **partial** (int/string exact match; see [config-db.md](config-db.md))
     - **Phases / objections** — **partial** (see [phases.md](phases.md))
     - **TLM** — **partial** (int put/get; see [tlm.md](tlm.md))
-    - **Sequences** — **partial** (see [sequences.md](sequences.md))
+    - **Sequences** — **partial** (`start` → virtual `body`; see [sequences.md](sequences.md))
     - **Virtual methods** — **partial** (see [virtual-methods.md](virtual-methods.md))
 11. Smoke: trimmed “hello UVM”, then larger Accellera UVM 1.2 slices as features land
+    - **Mini-UVM** — **partial** (factory + config_db + phases + sequences; see [mini-uvm.md](mini-uvm.md))
 
 ## Already usable baseline (do not re-do first)
 

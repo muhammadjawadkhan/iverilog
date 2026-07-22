@@ -25,7 +25,7 @@ module factory_basic;
     function new();
       super.new("pkt");
     endfunction
-    function uvm_object create_object(string name = "");
+    virtual function uvm_object create_object(string name = "");
       pkt o;
       o = new(name);
       return o;
@@ -36,30 +36,12 @@ module factory_basic;
     function new();
       super.new("pkt_ext");
     endfunction
-    function uvm_object create_object(string name = "");
+    virtual function uvm_object create_object(string name = "");
       pkt_ext o;
       o = new(name);
       return o;
     endfunction
   endclass
-
-  function uvm_object make_by_name(uvm_factory fac, string requested, string name);
-    string actual;
-    uvm_object_wrapper w;
-    pkt_wrapper pw;
-    pkt_ext_wrapper pew;
-    bit ok;
-    actual = fac.resolve_type_name(requested);
-    w = fac.find_by_name(actual);
-    ok = $cast(pw, w);
-    if (ok)
-      return pw.create_object(name);
-    ok = $cast(pew, w);
-    if (ok)
-      return pew.create_object(name);
-    $display("UVM_ERROR @ 0: reporter [FCTTYP] Type '%s' not registered", actual);
-    return null;
-  endfunction
 
   pkt_wrapper        w_pkt;
   pkt_ext_wrapper    w_ext;
@@ -82,7 +64,7 @@ module factory_basic;
     f.register(w_pkt);
     f.register(w_ext);
 
-    obj = make_by_name(f, "pkt", "p0");
+    obj = f.create_object_by_name("pkt", "", "p0");
     ok = $cast(p, obj);
     if (!ok || p.kind !== 1) begin
       $display("FAIL: create pkt ok=%0b", ok);
@@ -96,7 +78,7 @@ module factory_basic;
       pass = 0;
     end
 
-    obj = make_by_name(f, "pkt", "p1");
+    obj = f.create_object_by_name("pkt", "", "p1");
     ok = $cast(pe, obj);
     if (!ok || pe.kind !== 2) begin
       $display("FAIL: override create ok=%0b", ok);

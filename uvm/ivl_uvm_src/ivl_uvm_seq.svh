@@ -38,14 +38,15 @@ class uvm_sequence extends uvm_object;
     super.new(name);
   endfunction
 
-  // Override in a concrete sequence. Call body() on a *derived* handle —
-  // Icarus does not dispatch virtual methods, so start() does not invoke body().
-  task body();
+  // Override in a concrete sequence. start() invokes this via virtual
+  // dispatch (class tasks resolve through %callt/virt).
+  virtual task body();
   endtask
 
-  // Bind sequencer only. TB must then call body() via a concrete static type.
+  // Bind sequencer and run body() on the dynamic type.
   task start(uvm_sequencer sqr);
     m_sequencer = sqr;
+    body();
   endtask
 
   task start_item(uvm_sequence_item item);

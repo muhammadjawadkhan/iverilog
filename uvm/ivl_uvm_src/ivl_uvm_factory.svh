@@ -90,8 +90,8 @@ class uvm_factory;
     return cur;
   endfunction
 
-  // Base create calls wrapper.create_object through a base handle — returns
-  // null until virtual methods work. Use a $cast helper in the TB (see example).
+  // Resolve overrides, then call create_object on the registered wrapper
+  // through a base handle (virtual dispatch).
   function uvm_object create_object_by_name(string requested_type,
                                            string parent_inst_path = "",
                                            string name = "");

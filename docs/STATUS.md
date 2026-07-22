@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 ## Accellera UVM 1.2
 
@@ -22,12 +22,13 @@ Last updated: 2026-07-21
 | `$cast` / `$typename` | **Partial** on `feat/cast-typename`: class-handle `$cast` (dynamic is-a + assign); static `$typename` → `"class <name>"` etc. See [`docs/cast-typename.md`](cast-typename.md) and [`examples/cast_typename`](../examples/cast_typename). |
 | Covergroups | **Partial** on `feat/covergroup`: embedded `covergroup`/`coverpoint`/`bins`, `sample()`, `get_inst_coverage()` percentage. See [`docs/covergroup.md`](covergroup.md) and [`examples/covergroup`](../examples/covergroup). |
 | DPI-C | **Partial** on `feat/dpi-c`: `import "DPI-C" function` with scalar `int`; load `.so` via `vvp -d`. See [`docs/dpi.md`](dpi.md) and [`examples/dpi`](../examples/dpi). |
-| Factory | **Partial** on `feat/factory-slice`: name-based `uvm_factory` register / create / type-override; `uvm_object_wrapper` proxies; no `uvm_object_registry#(T)` yet. See [`docs/factory.md`](factory.md) and [`examples/factory`](../examples/factory). |
+| Factory | **Partial** on `feat/factory-slice` (+ virt create): name-based `uvm_factory` register / create / type-override; virtual `create_object`. See [`docs/factory.md`](factory.md) and [`examples/factory`](../examples/factory). |
 | config_db | **Partial** on `feat/config-db`: exact-match set/get/exists for `int` and `string`. See [`docs/config-db.md`](config-db.md) and [`examples/config_db`](../examples/config_db). |
 | Phases / objections | **Partial** on `feat/phases-objections`: `uvm_objection`, phase objection hooks, component children. See [`docs/phases.md`](phases.md) and [`examples/phases`](../examples/phases). |
 | TLM | **Partial** on `feat/tlm-ports`: int `uvm_tlm_fifo` + blocking put/get ports. See [`docs/tlm.md`](tlm.md) and [`examples/tlm`](../examples/tlm). |
-| Sequences | **Partial** on `feat/tlm-ports`: `uvm_sequence` / `uvm_sequencer` via package mailbox. See [`docs/sequences.md`](sequences.md) and [`examples/sequences`](../examples/sequences). |
-| Virtual methods | **Partial** on `feat/virtual-methods`: runtime dispatch for class method calls through handles. See [`docs/virtual-methods.md`](virtual-methods.md) and [`examples/virtual_methods`](../examples/virtual_methods). |
+| Sequences | **Partial**: `uvm_sequence` / `uvm_sequencer`; `start()` runs virtual `body()`. See [`docs/sequences.md`](sequences.md) and [`examples/sequences`](../examples/sequences). |
+| Virtual methods | **Partial**: runtime dispatch for class functions/tasks through handles; override auto storage. See [`docs/virtual-methods.md`](virtual-methods.md) and [`examples/virtual_methods`](../examples/virtual_methods). |
+| Mini-UVM smoke | **Partial**: factory + config_db + phases + sequences. See [`docs/mini-uvm.md`](mini-uvm.md) and [`examples/mini_uvm`](../examples/mini_uvm). |
 
 ## Remotes
 

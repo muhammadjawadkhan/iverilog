@@ -4895,10 +4895,12 @@ NetProc* PCallTask::elaborate_build_call_(Design*des, NetScope*scope,
 
 	/* Detect the case where the definition of the task is known
 	   empty. In this case, we need not bother with calls to the
-	   task, all the assignments, etc. Just return a no-op. */
+	   task, all the assignments, etc. Just return a no-op.
+	   Exception: class methods may be overridden at runtime, so
+	   keep the call even when the static callee body is empty. */
 
       if (const NetBlock*tp = dynamic_cast<const NetBlock*>(def->proc())) {
-	    if (tp->proc_first() == 0) {
+	    if (tp->proc_first() == 0 && ! use_this) {
 		  if (debug_elaborate) {
 			cerr << get_fileline() << ": PCallTask::elaborate_build_call_: "
 			     << "Eliding call to empty task " << task->basename() << endl;

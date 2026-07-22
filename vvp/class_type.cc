@@ -419,10 +419,11 @@ bool class_type::is_a(const class_type*target) const
       return false;
 }
 
-void class_type::set_method(const string&name, vvp_code_t code)
+void class_type::set_method(const string&name, vvp_code_t code, __vpiScope*scope)
 {
       method_t m;
       m.code = code;
+      m.scope = scope;
       methods_[name] = m;
 }
 

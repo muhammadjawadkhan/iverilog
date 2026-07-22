@@ -106,7 +106,15 @@ static void draw_send_function_argument(ivl_signal_t port)
 static int is_class_method(ivl_scope_t def)
 {
       ivl_scope_t parent = ivl_scope_parent(def);
-      return parent && ivl_scope_type(parent) == IVL_SCT_CLASS;
+      const char*name;
+      if (! (parent && ivl_scope_type(parent) == IVL_SCT_CLASS))
+	    return 0;
+	/* Constructors must not use virtual dispatch — `new` looks up the
+	   same method on the object being constructed and recurses forever. */
+      name = ivl_scope_basename(def);
+      if (name && strcmp(name, "new") == 0)
+	    return 0;
+      return 1;
 }
 
 static void draw_ufunc_preamble(ivl_expr_t expr)

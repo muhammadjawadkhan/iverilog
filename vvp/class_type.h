@@ -39,41 +39,30 @@ class class_type : public __vpiHandle {
       struct inst_x;
       typedef inst_x*inst_t;
 
-	/* Virtual method table: name -> code. Storage stays with the
-	   statically elaborated callee scope. Walks super on miss. */
+	/* Virtual method table: name -> code + defining scope. */
       struct method_t {
 	    vvp_code_t code;
+	    __vpiScope* scope;
       };
 
     public:
       explicit class_type(const std::string&nam, size_t nprop);
       ~class_type() override;
 
-	// This is the name of the class type.
       inline const std::string&class_name(void) const { return class_name_; }
-	// Superclass (may be filled later via compile_vpi_lookup).
       inline const class_type* get_super(void) const
       { return dynamic_cast<const class_type*>(super_); }
       inline vpiHandle* super_handle_ptr(void) { return &super_; }
-	/* True if this type is target or derived from target. */
       bool is_a(const class_type*target) const;
-	// Number of properties in the class definition.
       inline size_t property_count(void) const { return properties_.size(); }
 
-      void set_method(const std::string&name, vvp_code_t code);
+      void set_method(const std::string&name, vvp_code_t code, __vpiScope*scope);
       const method_t* find_method(const std::string&name) const;
 
-	// Set the details about the property. This is used during
-	// parse of the .vvp file to fill in the details of the
-	// property for the class definition.
       void set_property(size_t idx, const std::string&name, const std::string&type, uint64_t array_size);
-
-	// This method is called after all the properties are
-	// defined. This calculates information about the definition.
       void finish_setup(void);
 
     public:
-	// Constructors and destructors for making instances.
       inst_t instance_new() const;
       void instance_delete(inst_t) const;
 
@@ -88,7 +77,7 @@ class class_type : public __vpiHandle {
 
       void copy_property(inst_t dst, size_t idx, inst_t src) const;
 
-    public: // VPI related methods
+    public:
       int get_type_code(void) const override;
 
     private:

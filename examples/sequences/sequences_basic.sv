@@ -1,4 +1,4 @@
-// Tier B smoke: sequence start/body → sequencer → get_next_item.
+// Tier B smoke: sequence start → virtual body → sequencer → get_next_item.
 `timescale 1ns/1ps
 
 module sequences_basic;
@@ -14,18 +14,17 @@ module sequences_basic;
     function new(string name = "my_seq");
       super.new(name);
     endfunction
-    task body();
+    virtual task body();
       my_item it;
-      uvm_sequencer s;
       it = new("it0");
       it.data = 99;
-      // Inline put (avoid inherited-method lookup gaps).
-      s = m_sequencer;
-      s.put_item(it);
+      start_item(it);
+      finish_item(it);
     endtask
   endclass
 
   uvm_sequencer sqr;
+  uvm_sequence  seq_h;
   my_seq        seq;
   uvm_sequence_item got;
   my_item       mi;
@@ -36,9 +35,10 @@ module sequences_basic;
     pass = 1;
     sqr = new("sqr", null);
     seq = new("seq");
+    seq_h = seq;
 
-    seq.start(sqr);
-    seq.body();
+    // start() on a base handle must dispatch body() to my_seq.
+    seq_h.start(sqr);
     sqr.get_next_item(got);
     ok = $cast(mi, got);
     if (!ok || mi.data !== 99) begin
