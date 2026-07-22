@@ -2358,6 +2358,26 @@ NetExpr*PECallFunction::cast_to_width_(NetExpr*expr, unsigned wid) const
       return cast_to_width(expr, wid, signed_flag_, *this);
 }
 
+static string typename_of_ivl_type(ivl_type_t data_type)
+{
+      if (!data_type)
+	    return "unknown";
+      if (const netclass_t*cls = dynamic_cast<const netclass_t*>(data_type))
+	    return string("class ") + cls->get_name().str();
+      switch (data_type->base_type()) {
+	  case IVL_VT_STRING:
+	    return "string";
+	  case IVL_VT_REAL:
+	    return "real";
+	  case IVL_VT_BOOL:
+	    return "bit";
+	  case IVL_VT_LOGIC:
+	    return "logic";
+	  default:
+	    return "unknown";
+      }
+}
+
 /*
  * Given a call to a system function, generate the proper expression
  * nodes to represent the call in the netlist. Since we don't support
@@ -2571,20 +2591,24 @@ NetExpr* PECallFunction::elaborate_sfunc_(Design*des, NetScope*scope,
 
 	    if (const PETypename*type_expr = dynamic_cast<PETypename*>(texpr)) {
 		  ivl_type_t data_type = type_expr->get_type()->elaborate_type(des, scope);
-		  if (const netclass_t*cls = dynamic_cast<const netclass_t*>(data_type)) {
-			tname = string("class ") + cls->get_name().str();
-		  } else if (data_type && data_type->base_type() == IVL_VT_STRING) {
-			tname = "string";
-		  } else if (data_type && data_type->base_type() == IVL_VT_REAL) {
-			tname = "real";
-		  } else if (data_type && data_type->base_type() == IVL_VT_BOOL) {
-			tname = "bit";
-		  } else if (data_type && data_type->base_type() == IVL_VT_LOGIC) {
-			tname = "logic";
-		  } else {
-			tname = "unknown";
+		  tname = typename_of_ivl_type(data_type);
+	    } else if (const PEIdent*id = dynamic_cast<const PEIdent*>(texpr)) {
+		    // Type parameter names (e.g. $typename(T) in class #(type T))
+		    // are PEIdent, not PETypename. Search upward: type params
+		    // live on the class scope, not the method scope.
+		  if (id->path().name.size() == 1 &&
+		      id->path().name.front().index.empty()) {
+			perm_string pname = id->path().name.front().name;
+			for (NetScope*ps = scope ; ps && tname.empty() ; ps = ps->parent()) {
+			      ivl_type_t data_type = 0;
+			      ps->get_parameter(des, pname, data_type);
+			      if (data_type)
+				    tname = typename_of_ivl_type(data_type);
+			}
 		  }
-	    } else {
+	    }
+
+	    if (tname.empty()) {
 		  NetExpr*ne = elab_sys_task_arg(des, scope, name, 0, texpr);
 		  if (!ne)
 			return 0;

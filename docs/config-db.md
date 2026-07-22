@@ -18,11 +18,11 @@ uvm_config_db_object#(cfg_item)::set("", "env.agent", "cfg", obj_in);
 obj_out = uvm_config_db_object#(cfg_item)::get("", "env.agent", "cfg");
 ```
 
-String resources use second parameter `IS_STR=1` (`uvm_config_db#(string, 1)::…`). Plain `uvm_config_db#(string)` without `IS_STR` still selects the int store path.
+String resources use second parameter `IS_STR=1` (`uvm_config_db#(string, 1)::…`) when both int and string specializations appear in one compilation unit. Plain `uvm_config_db#(string)` without `IS_STR` still selects the int store path (static methods do not get per-specialization `$typename(T)` folding when multiple `#()` specializations are compiled together).
 
 Object resources use `uvm_config_db_object#(T)` (a separate class — a class-handle `T` cannot share the int/string store branches). `get()` returns the typed handle (or `null`), rather than Accellera's `ref` out-parameter, because function `ref`/`output` ports are not yet supported; use `exists()` to tell "absent" from a stored `null`. Associative arrays / queues of class handles are unsupported, so the object store uses a fixed array + string-index AA (`IVL_UVM_CONFIG_DB_MAX_OBJECTS`, default 64).
 
-The user's class must live in a **package** (extending `uvm_object`); a class declared at `$unit` scope that extends a package base class is not currently supported by the elaborator (see Gaps).
+User classes may be declared at `$unit` scope (extending `uvm_object` via `import ivl_uvm_pkg::*`) or in a dedicated package.
 
 Key = `contxt` + `inst_name` + `field_name` joined with `.` (empty parts omitted).
 
@@ -35,8 +35,7 @@ Key = `contxt` + `inst_name` + `field_name` joined with `.` (empty parts omitted
 
 ## Gaps
 
-- `uvm_config_db#(string)` without `IS_STR=1` (needs a compile-time type trait; `$typename(T)` mis-binds type parameters and `type(T)==type(string)` is not parsed)
-- `$unit`-scope class extending a package base class (elaboration ordering: package classes are not registered when a dependent `$unit` class is scope-elaborated). Put user classes in a package that imports the UVM package. The former infinite-loop hang is fixed and now reports a clear "Can not find the scope type definition" error.
+- `uvm_config_db#(string)` without `IS_STR=1` when int and string specializations compile together (static `$typename(T)` does not fold per specialization in that case; use `#(string, 1)` or a compilation unit with only string uses)
 - Object `get()` via Accellera `ref` out-parameter (function `ref`/`output` ports unsupported)
 - Wildcard / regex instance paths (`agent.*`)
 - Hierarchical lookup walking parent scopes

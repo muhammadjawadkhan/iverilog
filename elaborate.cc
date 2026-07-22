@@ -8551,8 +8551,10 @@ Design* elaborate(list<perm_string>roots)
 	// module and elaborate what I find.
       Design*des = new Design;
 
-	// Elaborate the compilation unit scopes. From here on, these are
-	// treated as an additional set of packages.
+	// Create compilation unit scopes first (shells only). Elaborate them
+	// after ordinary packages so $unit classes that extend an imported
+	// package base (e.g. uvm_object) see the base class already registered.
+      vector<elaborator_work_item_t*> unit_elaborate_work;
       if (gn_system_verilog()) {
 	    for (vector<PPackage*>::iterator pkg = pform_units.begin()
 		       ; pkg != pform_units.end() ; ++pkg) {
@@ -8562,14 +8564,12 @@ Design* elaborate(list<perm_string>roots)
 		  scope->add_imports(&unit->explicit_imports);
 		  set_scope_timescale(des, scope, unit);
 
-		  elaborator_work_item_t*es = new elaborate_package_t(des, scope, unit);
-		  des->elaboration_work_list.push_back(es);
-
 		  pack_elems[i].pack = unit;
 		  pack_elems[i].scope = scope;
 		  i += 1;
 
 		  unit_scopes[unit] = scope;
+		  unit_elaborate_work.push_back(new elaborate_package_t(des, scope, unit));
 	    }
       }
 
@@ -8594,6 +8594,10 @@ Design* elaborate(list<perm_string>roots)
 	    pack_elems[i].scope = scope;
 	    i += 1;
       }
+
+	// Now elaborate compilation units (after imported packages).
+      for (elaborator_work_item_t*es : unit_elaborate_work)
+	    des->elaboration_work_list.push_back(es);
 
 	// Scan the root modules by name, and elaborate their scopes.
       i = 0;

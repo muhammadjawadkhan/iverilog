@@ -1,26 +1,20 @@
-// Tier B #2 smoke: uvm_config_db#(int)::, uvm_config_db#(string,1)::, and
-// uvm_config_db_object#(T):: object-handle API.
+// Tier B #2 smoke: uvm_config_db#(int)::, uvm_config_db#(string):: (via IS_STR
+// trait or explicit #(string,1)), and uvm_config_db_object#(T):: API.
 `timescale 1ns/1ps
 
-// User classes live in their own package that imports the UVM package (the
-// idiomatic pattern). A class defined at $unit scope that extends a package
-// base is not currently supported by the elaborator.
-package cfg_pkg;
-  import ivl_uvm_pkg::*;
-  class cfg_item extends uvm_object;
-    int payload;
-    function new(string name = "cfg_item");
-      super.new(name);
-    endfunction
-    virtual function string get_type_name();
-      return "cfg_item";
-    endfunction
-  endclass
-endpackage
+import ivl_uvm_pkg::*;
+
+class cfg_item extends uvm_object;
+  int payload;
+  function new(string name = "cfg_item");
+    super.new(name);
+  endfunction
+  virtual function string get_type_name();
+    return "cfg_item";
+  endfunction
+endclass
 
 module config_db_basic;
-  import ivl_uvm_pkg::*;
-  import cfg_pkg::*;
 
   int  n;
   int  pass;

@@ -263,9 +263,15 @@ NetScope*NetScope::find_typedef_scope(const Design*des, const typedef_t*type_i)
 		  return cur_scope;
 
 	    NetScope*import_scope = cur_scope->find_import(des, type_i->name);
-	    if (import_scope && visited.find(import_scope) == visited.end())
+	    if (import_scope && visited.find(import_scope) == visited.end()) {
+		    // Imported typedefs are distinct objects from the
+		    // referencing scope's forward decl; match by name.
+		  if (import_scope->typedefs_.find(type_i->name) != import_scope->typedefs_.end())
+			return import_scope;
+		  if (import_scope->classes_.find(type_i->name) != import_scope->classes_.end())
+			return import_scope;
 		  cur_scope = import_scope;
-	    else if (cur_scope == unit_)
+	    } else if (cur_scope == unit_)
 		  return 0;
 	    else
 		  cur_scope = cur_scope->parent();
