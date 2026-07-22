@@ -35,7 +35,7 @@ Channel is a **package-level** `mailbox #(uvm_sequence_item)` (one shared channe
 - No `uvm_sequence#(REQ,RSP)` / parameterized sequencer
 - No arbitration, grab/lock, response path
 - Mailbox arrays crash → not multi-sequencer isolated
-- No `uvm_driver` base (example pulls on sequencer directly)
+- Driver / analysis: see [driver.md](driver.md)
 
 ## Example
 

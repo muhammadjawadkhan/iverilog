@@ -22,9 +22,11 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
     - **Phases / objections** — **partial** (see [phases.md](phases.md))
     - **TLM** — **partial** (int put/get; see [tlm.md](tlm.md))
     - **Sequences** — **partial** (`start` → virtual `body`; see [sequences.md](sequences.md))
+    - **Driver / analysis** — **partial** (`uvm_driver` + single-subscriber analysis; see [driver.md](driver.md))
     - **Virtual methods** — **partial** (see [virtual-methods.md](virtual-methods.md))
 11. Smoke: trimmed “hello UVM”, then larger Accellera UVM 1.2 slices as features land
     - **Mini-UVM** — **partial** (factory + config_db + phases + sequences; see [mini-uvm.md](mini-uvm.md))
+    - **Driver smoke** — **partial** (see [driver.md](driver.md) / [`examples/driver`](../examples/driver))
 
 ## Already usable baseline (do not re-do first)
 

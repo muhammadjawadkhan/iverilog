@@ -77,4 +77,33 @@ class uvm_blocking_get_port;
   endfunction
 endclass : uvm_blocking_get_port
 
+// Analysis: single-subscriber smoke (no subscriber queues / AAs of handles).
+// Connect one uvm_subscriber; write() dispatches virtually.
+class uvm_subscriber extends uvm_component;
+  function new(string name = "uvm_subscriber", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  virtual function void write(uvm_sequence_item t);
+  endfunction
+endclass : uvm_subscriber
+
+class uvm_analysis_port;
+  uvm_subscriber m_imp;
+
+  function new(string name = "uvm_analysis_port");
+  endfunction
+
+  function void connect(uvm_subscriber imp);
+    m_imp = imp;
+  endfunction
+
+  function void write(uvm_sequence_item t);
+    uvm_subscriber s;
+    s = m_imp;
+    if (s != null)
+      s.write(t);
+  endfunction
+endclass : uvm_analysis_port
+
 `endif // IVL_UVM_TLM_PORTS_SVH

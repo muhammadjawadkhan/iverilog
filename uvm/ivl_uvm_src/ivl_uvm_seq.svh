@@ -59,4 +59,44 @@ class uvm_sequence extends uvm_object;
   endtask
 endclass : uvm_sequence
 
+// Accellera-shaped driver: pulls items from a bound sequencer. Override
+// run_phase / drive_item in a concrete driver (virtual dispatch).
+class uvm_driver extends uvm_component;
+  uvm_sequencer seq_item_port;
+
+  function new(string name = "uvm_driver", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  function void set_sequencer(uvm_sequencer sqr);
+    seq_item_port = sqr;
+  endfunction
+
+  task get_next_item(output uvm_sequence_item item);
+    uvm_sequencer s;
+    s = seq_item_port;
+    s.get_next_item(item);
+  endtask
+
+  function void item_done();
+    uvm_sequencer s;
+    s = seq_item_port;
+    s.item_done();
+  endfunction
+
+  // Override: process one item (default no-op).
+  virtual task drive_item(uvm_sequence_item item);
+  endtask
+
+  // Override for multi-item loops; default pulls and drives one item.
+  virtual task run_phase(uvm_phase phase);
+    uvm_sequence_item item;
+    phase.raise_objection(1);
+    get_next_item(item);
+    drive_item(item);
+    item_done();
+    phase.drop_objection(1);
+  endtask
+endclass : uvm_driver
+
 `endif // IVL_UVM_SEQ_SVH
