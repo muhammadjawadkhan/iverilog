@@ -7627,6 +7627,9 @@ bool PPackage::elaborate(Design*des, NetScope*scope) const
 	// Elaborate task methods.
       elaborate_tasks(des, scope, tasks);
 
+	// Specialized C#(T) method bodies (may depend on peer classes).
+      des->elaborate_class_specializations();
+
 	// Elaborate class definitions.
       elaborate_classes(des, scope, classes);
 
@@ -7665,6 +7668,9 @@ bool Module::elaborate(Design*des, NetScope*scope) const
 	      // behaviors so that task calls may reference these, and after
 	      // the signals so that the tasks can reference them.
 	    elaborate_tasks(des, scope, tasks);
+
+	      // Specialized C#(T) method bodies (may depend on peer classes).
+	    des->elaborate_class_specializations();
 
 	      // Elaborate class definitions.
 	    elaborate_classes(des, scope, classes);

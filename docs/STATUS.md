@@ -22,7 +22,7 @@ Last updated: 2026-07-22
 | `$cast` / `$typename` | **Partial** on `feat/cast-typename`: class-handle `$cast` (dynamic is-a + assign); static `$typename` → `"class <name>"` etc. See [`docs/cast-typename.md`](cast-typename.md) and [`examples/cast_typename`](../examples/cast_typename). |
 | Covergroups | **Partial** on `feat/covergroup`: embedded `covergroup`/`coverpoint`/`bins`, `sample()`, `get_inst_coverage()` percentage. See [`docs/covergroup.md`](covergroup.md) and [`examples/covergroup`](../examples/covergroup). |
 | DPI-C | **Partial** on `feat/dpi-c`: `import "DPI-C" function` with scalar `int`; load `.so` via `vvp -d`. See [`docs/dpi.md`](dpi.md) and [`examples/dpi`](../examples/dpi). |
-| Factory | **Partial** on `feat/factory-slice` (+ virt create): name-based `uvm_factory` register / create / type-override; virtual `create_object`. See [`docs/factory.md`](factory.md) and [`examples/factory`](../examples/factory). |
+| Factory | **Partial**: name-based factory + `uvm_object_registry#(T,Tname)` auto-register / create. See [`factory.md`](factory.md) / [`examples/factory`](../examples/factory). |
 | config_db | **Partial** on `feat/config-db`: exact-match set/get/exists for `int` and `string`. See [`docs/config-db.md`](config-db.md) and [`examples/config_db`](../examples/config_db). |
 | Phases / objections | **Partial** on `feat/phases-objections`: `uvm_objection`, phase objection hooks, component children. See [`docs/phases.md`](phases.md) and [`examples/phases`](../examples/phases). |
 | TLM | **Partial** on `feat/tlm-ports`: int `uvm_tlm_fifo` + blocking put/get ports. See [`docs/tlm.md`](tlm.md) and [`examples/tlm`](../examples/tlm). |

@@ -31,11 +31,13 @@
 # include  "netlist.h"
 # include  "netscalar.h"
 # include  "netvector.h"
+# include  "netclass.h"
 # include  "util.h"
 # include  "compiler.h"
 # include  "netmisc.h"
 # include  "PExpr.h"
 # include  "PTask.h"
+# include  "PClass.h"
 # include  <sstream>
 # include  "ivl_assert.h"
 
@@ -54,6 +56,22 @@ Design:: Design()
 
 Design::~Design()
 {
+}
+
+void Design::add_class_specialization(netclass_t*cls, PClass*pclass)
+{
+      class_specializations_.push_back(make_pair(cls, pclass));
+}
+
+void Design::elaborate_class_specializations()
+{
+      for (size_t idx = 0 ; idx < class_specializations_.size() ; idx += 1) {
+	    netclass_t*cls = class_specializations_[idx].first;
+	    PClass*pclass = class_specializations_[idx].second;
+	    if (cls && pclass)
+		  cls->elaborate(this, pclass);
+      }
+      class_specializations_.clear();
 }
 
 void Design::set_precision(int val)

@@ -5236,6 +5236,12 @@ class Design {
 
       std::set<NetScope*> defparams_later;
 
+	/* Parameterized class specializations (C#(T)) create scopes
+	   during type elaboration; defer method-body elaborate until
+	   after peer classes have elaborate_sig so T::new exists. */
+      void add_class_specialization(netclass_t*cls, PClass*pclass);
+      void elaborate_class_specializations();
+
 	// PARAMETERS
 
       void run_defparams();
@@ -5318,6 +5324,9 @@ class Design {
 
 	// List the ANALOG processes in the design.
       NetAnalogTop*aprocs_;
+
+	// Parameterized class specializations awaiting method elaborate.
+      std::vector<std::pair<netclass_t*,PClass*> > class_specializations_;
 
 	// Map of discipline take to NetNet for the reference node.
       std::map<perm_string,NetNet*>discipline_references_;

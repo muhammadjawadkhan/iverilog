@@ -1,4 +1,4 @@
-// Tier B #1 smoke: name-based factory register / resolve / create / override.
+// Tier B #1 smoke: uvm_object_registry#(T) auto-register + create / override.
 `timescale 1ns/1ps
 
 module factory_basic;
@@ -21,36 +21,18 @@ module factory_basic;
     `ivl_uvm_object_utils(pkt_ext)
   endclass
 
-  class pkt_wrapper extends uvm_object_wrapper;
-    function new();
-      super.new("pkt");
-    endfunction
-    virtual function uvm_object create_object(string name = "");
-      pkt o;
-      o = new(name);
-      return o;
-    endfunction
-  endclass
+  // Module-level typedefs of the Accellera-shaped registry (nested
+  // `TYPE::type_id` scope resolution is not supported yet).
+  typedef uvm_object_registry#(pkt, "pkt")         pkt_type_id;
+  typedef uvm_object_registry#(pkt_ext, "pkt_ext") pkt_ext_type_id;
 
-  class pkt_ext_wrapper extends uvm_object_wrapper;
-    function new();
-      super.new("pkt_ext");
-    endfunction
-    virtual function uvm_object create_object(string name = "");
-      pkt_ext o;
-      o = new(name);
-      return o;
-    endfunction
-  endclass
-
-  pkt_wrapper        w_pkt;
-  pkt_ext_wrapper    w_ext;
+  pkt_type_id        w_pkt;
+  pkt_ext_type_id    w_ext;
   uvm_factory        f;
   uvm_object         obj;
   pkt                p;
   pkt_ext            pe;
   uvm_object_wrapper found;
-  pkt_wrapper        found_pkt;
   bit                ok;
   int                pass;
   string             actual;
@@ -58,16 +40,22 @@ module factory_basic;
   initial begin
     pass = 1;
 
+    // Construction auto-registers with the factory.
     w_pkt = new;
     w_ext = new;
     f = uvm_get_factory();
-    f.register(w_pkt);
-    f.register(w_ext);
 
     obj = f.create_object_by_name("pkt", "", "p0");
     ok = $cast(p, obj);
     if (!ok || p.kind !== 1) begin
       $display("FAIL: create pkt ok=%0b", ok);
+      pass = 0;
+    end
+
+    // Also exercise wrapper.create directly.
+    p = w_pkt.create("p0b");
+    if (p == null || p.kind !== 1) begin
+      $display("FAIL: type_id.create");
       pass = 0;
     end
 
@@ -86,8 +74,7 @@ module factory_basic;
     end
 
     found = f.find_by_name("pkt");
-    ok = $cast(found_pkt, found);
-    if (!ok) begin
+    if (found == null) begin
       $display("FAIL: find_by_name pkt");
       pass = 0;
     end

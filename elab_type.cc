@@ -283,7 +283,9 @@ static ivl_type_t specialize_class_type_(Design*des, NetScope*use_scope,
 		  var_this->set_data_type(use_class);
       }
 
-      use_class->elaborate(des, pclass);
+	// Defer method-body elaborate so peer types (e.g. T in
+	// registry#(T)) have completed elaborate_sig first.
+      des->add_class_specialization(use_class, pclass);
 
       return use_class;
 }

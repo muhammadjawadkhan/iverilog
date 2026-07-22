@@ -58,7 +58,7 @@ make -C examples/param_classes run
 
 - [ ] Richer inheritance + parameters interactions as needed by Accellera UVM.
 - [ ] Broader ivtest coverage beyond the local smoke examples.
-- [ ] Accellera-shaped `uvm_*#(T)` registries (needs this path + more).
+- [x] Accellera-shaped `uvm_object_registry#(T)` MVP (see [factory.md](factory.md)).
 
 ## Status pointer
 
