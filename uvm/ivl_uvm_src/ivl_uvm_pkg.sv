@@ -41,6 +41,7 @@ package ivl_uvm_pkg;
   `include "ivl_uvm_phases.svh"
   `include "ivl_uvm_comps.svh"
   `include "ivl_uvm_factory.svh"
+  `include "ivl_uvm_registry.svh"
   `include "ivl_uvm_config_db.svh"
   `include "ivl_uvm_mbx.svh"
   `include "ivl_uvm_tlm.svh"

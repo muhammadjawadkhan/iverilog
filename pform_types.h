@@ -47,6 +47,7 @@ class PWire;
 class Statement;
 class netclass_t;
 class netenum_t;
+struct parmvalue_t;
 typedef named<PExpr*> named_pexpr_t;
 
 struct type_restrict_t {
@@ -226,16 +227,23 @@ public:
 };
 
 struct typeref_t : public data_type_t {
-      explicit typeref_t(typedef_t *t, PScope *s = 0) : scope(s), type(t) {}
+      explicit typeref_t(typedef_t *t, PScope *s = 0)
+      : scope(s), type(t), overrides_(0) {}
+      explicit typeref_t(typedef_t *t, parmvalue_t *ov, PScope *s = 0)
+      : scope(s), type(t), overrides_(ov) {}
 
       ivl_type_t elaborate_type_raw(Design*des, NetScope*scope) const override;
       NetScope *find_scope(Design* des, NetScope *scope) const override;
 
       std::ostream& debug_dump(std::ostream&out) const override;
 
+      parmvalue_t* overrides() const { return overrides_; }
+      typedef_t* get_typedef() const { return type; }
+
 private:
       PScope *scope;
       typedef_t *type;
+      parmvalue_t *overrides_;
 };
 
 struct type_parameter_t : data_type_t {

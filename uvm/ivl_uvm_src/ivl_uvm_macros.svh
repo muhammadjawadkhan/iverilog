@@ -64,9 +64,10 @@
     typedef class `IVL_UVM_MBX_T;
   `endif // IVL_UVM_MBX_T
 
-  // Lightweight Accellera-shaped utils (no uvm_object_registry#(T)).
-  // Still register a concrete uvm_object_wrapper with uvm_get_factory().
+  // Accellera-shaped utils: typedef type_id = uvm_object_registry#(TYPE,"TYPE").
+  // Register with `TYPE::type_id::get()` (or construct `TYPE::type_id id = new`).
   `define ivl_uvm_object_utils(TYPE) \
+    typedef uvm_object_registry#(TYPE, `"TYPE`") type_id; \
     virtual function string get_type_name(); \
       return `"TYPE`"; \
     endfunction \

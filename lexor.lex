@@ -131,12 +131,18 @@ static int ts_prec = 0;
  * The parser sometimes needs to indicate to the lexor that the next
  * identifier needs to be understood in the context of a package. The
  * parser feeds back that left context with calls to the
- * lex_in_package_scope.
+ * lex_in_package_scope. Likewise, class_scope (TYPE::) uses
+ * lex_in_class_scope so nested typedefs like pkt::type_id resolve.
  */
 static PPackage* in_package_scope = 0;
+static LexicalScope* in_class_scope = 0;
 void lex_in_package_scope(PPackage*pkg)
 {
       in_package_scope = pkg;
+}
+void lex_in_class_scope(LexicalScope*cls)
+{
+      in_class_scope = cls;
 }
 
 %}
@@ -396,6 +402,19 @@ TU [munpf]
 		  }
 	    }
 	    in_package_scope = 0;
+	    return rc;
+      }
+
+	/* Same idea for class nested typedefs: pkt::type_id */
+      if (in_class_scope) {
+	    if (rc == IDENTIFIER) {
+		  if (typedef_t*type = pform_test_type_identifier(in_class_scope, yylval.text)) {
+			yylval.type_identifier.text = yylval.text;
+			yylval.type_identifier.type = type;
+			rc = TYPE_IDENTIFIER;
+		  }
+	    }
+	    in_class_scope = 0;
 	    return rc;
       }
 

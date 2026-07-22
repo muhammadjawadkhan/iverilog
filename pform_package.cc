@@ -249,6 +249,19 @@ typedef_t* pform_test_type_identifier(PPackage*pkg, const char*txt)
       return 0;
 }
 
+typedef_t* pform_test_type_identifier(LexicalScope*scope, const char*txt)
+{
+      if (scope == 0)
+	    return 0;
+
+      perm_string use_name = lex_strings.make(txt);
+      LexicalScope::typedef_map_t::const_iterator cur = scope->typedefs.find(use_name);
+      if (cur != scope->typedefs.end())
+	    return cur->second;
+
+      return 0;
+}
+
 /*
  * The lexor uses this function to know if the identifier names the
  * package. It will call this a PACKAGE_IDENTIFIER token in that case,

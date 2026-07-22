@@ -754,6 +754,9 @@ class NetNet  : public NetObj, public PortType {
       bool get_scalar() const;
 
       inline const ivl_type_s* net_type(void) const { return net_type_; }
+	/* Used when specializing parameterized classes so method
+	   `this` ports point at the specialized netclass_t. */
+      void set_data_type(ivl_type_t type) { net_type_ = type; }
       const netenum_t*enumeration(void) const;
       const netstruct_t*struct_type(void) const;
       const netdarray_t*darray_type(void) const;
@@ -1034,6 +1037,13 @@ class NetScope : public Definitions, public Attrib {
 	   exist. */
       void replace_parameter(Design *des, perm_string name, PExpr*val,
 			     NetScope*scope, bool defparam = false);
+
+	/* Force an override even when the parameter is marked
+	   non-overridable (class parameter ports). Used for C#(T)
+	   specialization. Resets any prior evaluation. Returns false
+	   if the name is missing or is a localparam. */
+      bool force_parameter_override(perm_string name, PExpr*val,
+				    NetScope*val_scope);
 
 	/* This is used to ensure the value of a parameter cannot be
 	   changed at run-time. This is required if a specparam is used
@@ -4055,6 +4065,10 @@ class NetEUFunc  : public NetExpr {
 
       const NetScope* func() const;
 
+	/* Super.method must not use virtual dispatch. */
+      void set_no_virt(bool flag) { no_virt_ = flag; }
+      bool no_virt() const { return no_virt_; }
+
       virtual void dump(std::ostream&) const override;
 
       virtual void expr_scan(struct expr_scan_t*) const override;
@@ -4073,6 +4087,7 @@ class NetEUFunc  : public NetExpr {
       NetESignal*result_sig_;
       std::vector<NetExpr*> parms_;
       bool need_const_;
+      bool no_virt_;
 
     private: // not implemented
       NetEUFunc(const NetEUFunc&);
@@ -4119,6 +4134,10 @@ class NetUTask  : public NetProc {
 
       const NetScope* task() const;
 
+	/* Super.method must not use virtual dispatch. */
+      void set_no_virt(bool flag) { no_virt_ = flag; }
+      bool no_virt() const { return no_virt_; }
+
       virtual NexusSet* nex_input(bool rem_out = true, bool always_sens = false,
                                   bool nested_func = false) const override;
       virtual void nex_output(NexusSet&) override;
@@ -4129,6 +4148,7 @@ class NetUTask  : public NetProc {
 
     private:
       NetScope*task_;
+      bool no_virt_;
 };
 
 /*
@@ -4721,10 +4741,14 @@ class NetENull : public NetExpr {
  */
 class NetEProperty : public NetExpr {
     public:
+	// Property of a class-typed net (obj.prop).
       NetEProperty(NetNet*n, size_t pidx_, NetExpr*canon_index =0);
+	// Property of a class-typed expression (obj.a.b — nested base).
+      NetEProperty(NetExpr*base, size_t pidx_, NetExpr*canon_index =0);
       ~NetEProperty() override;
 
       inline const NetNet* get_sig() const { return net_; }
+      inline const NetExpr* get_base() const { return base_; }
       inline size_t property_idx() const { return pidx_; }
       inline const NetExpr*get_index() const { return index_; }
 
@@ -4738,6 +4762,7 @@ class NetEProperty : public NetExpr {
 
     private:
       NetNet*net_;
+      NetExpr*base_;
       size_t pidx_;
       NetExpr*index_;
 };
@@ -5211,6 +5236,12 @@ class Design {
 
       std::set<NetScope*> defparams_later;
 
+	/* Parameterized class specializations (C#(T)) create scopes
+	   during type elaboration; defer method-body elaborate until
+	   after peer classes have elaborate_sig so T::new exists. */
+      void add_class_specialization(netclass_t*cls, PClass*pclass);
+      void elaborate_class_specializations();
+
 	// PARAMETERS
 
       void run_defparams();
@@ -5293,6 +5324,9 @@ class Design {
 
 	// List the ANALOG processes in the design.
       NetAnalogTop*aprocs_;
+
+	// Parameterized class specializations awaiting method elaborate.
+      std::vector<std::pair<netclass_t*,PClass*> > class_specializations_;
 
 	// Map of discipline take to NetNet for the reference node.
       std::map<perm_string,NetNet*>discipline_references_;

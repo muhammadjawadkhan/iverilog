@@ -250,6 +250,16 @@ PECallFunction::PECallFunction(PPackage *pkg, const pform_name_t &n, const list<
 {
 }
 
+PECallFunction::PECallFunction(data_type_t* cls, const pform_name_t &n, const vector<named_pexpr_t> &parms)
+: path_(n), parms_(parms), class_type_(cls), is_overridden_(false)
+{
+}
+
+PECallFunction::PECallFunction(data_type_t* cls, const pform_name_t &n, const list<named_pexpr_t> &parms)
+: path_(n), parms_(parms.begin(), parms.end()), class_type_(cls), is_overridden_(false)
+{
+}
+
 PECallFunction::PECallFunction(perm_string n, const vector<named_pexpr_t> &parms)
 : path_(pn_from_ps(n)), parms_(parms), is_overridden_(false)
 {

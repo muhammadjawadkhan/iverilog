@@ -4003,9 +4003,66 @@ NetProc* PCallTask::elaborate_sys(Design*des, NetScope*scope) const
  *    y = b;
  *  end
  */
+NetProc* PCallTask::elaborate_class_scope_(Design*des, NetScope*scope) const
+{
+      ivl_assert(*this, class_type_);
+
+      ivl_type_t use_type = class_type_->elaborate_type(des, scope);
+      const netclass_t*cls = dynamic_cast<const netclass_t*>(use_type);
+      if (cls == 0) {
+	    cerr << get_fileline() << ": error: "
+		 << "Class scope before `::' does not name a class type."
+		 << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      if (path_.size() != 1) {
+	    cerr << get_fileline() << ": sorry: "
+		 << "Only Class::method(...) is supported as a statement (got `"
+		 << path_ << "')." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      perm_string method_name = peek_tail_name(path_);
+      NetScope*method = cls->method_from_name(method_name);
+      if (method == 0) {
+	    cerr << get_fileline() << ": error: " << method_name
+		 << " is not a method of class " << cls->get_name()
+		 << "." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      if (method->type() != NetScope::FUNC && method->type() != NetScope::TASK) {
+	    cerr << get_fileline() << ": error: " << method_name
+		 << " of class " << cls->get_name()
+		 << " is not a task or function." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+	/* Specialize/late-elab method body if this specialization was
+	   created after the normal class-method pass (e.g. first use is
+	   C#(T)::set with no prior C#(T) variable). */
+      if (method->type() == NetScope::FUNC && method->elab_stage() < 3) {
+	    const PFunction*pfunc = method->func_pform();
+	    if (pfunc)
+		  pfunc->elaborate(des, method);
+      }
+
+      NetENull*null_this = new NetENull;
+      null_this->set_line(*this);
+      return elaborate_build_call_(des, scope, method, null_this, true);
+}
+
 NetProc* PCallTask::elaborate_usr(Design*des, NetScope*scope) const
 {
       ivl_assert(*this, scope);
+
+      if (class_type_)
+	    return elaborate_class_scope_(des, scope);
 
       NetScope*pscope = scope;
       if (package_) {
@@ -4501,7 +4558,65 @@ NetProc* PCallTask::elaborate_method_(Design*des, NetScope*scope,
 									       parm_names);
 			      }
 			}
+
+			/* Class-handle property method calls are handled below
+			   for any path_tail length (obj.a.b.method). */
 		  }
+	    }
+      }
+
+	/* Class-handle property chain: obj.a.b.method(...) — path_tail is
+	   the property path; method_name is the method on the final type. */
+      if (! sr.path_tail.empty()) {
+	    const netclass_t*cls = dynamic_cast<const netclass_t*>(sr.type);
+	    if (!cls && net->net_type())
+		  cls = dynamic_cast<const netclass_t*>(net->net_type());
+	    if (cls) {
+		  const netclass_t* cur = cls;
+		  NetExpr* use_this = 0;
+		  bool ok = true;
+		  for (pform_name_t::const_iterator it = sr.path_tail.begin()
+			     ; it != sr.path_tail.end() ; ++it) {
+			int pidx = cur->property_idx_from_name(it->name);
+			if (pidx < 0) {
+			      ok = false;
+			      break;
+			}
+			ivl_type_t ptype = cur->get_prop_type(pidx);
+			const netclass_t* pcls = dynamic_cast<const netclass_t*>(ptype);
+			if (!pcls || pcls->is_covergroup()) {
+			      ok = false;
+			      break;
+			}
+			if (use_this == 0)
+			      use_this = new NetEProperty(net, (size_t)pidx, 0);
+			else
+			      use_this = new NetEProperty(use_this, (size_t)pidx, 0);
+			use_this->set_line(*this);
+			cur = pcls;
+		  }
+		  if (ok && use_this) {
+			NetScope*task = cur->method_from_name(method_name);
+			if (task == 0) {
+			      delete use_this;
+			      if (! add_this_flag) {
+				    cerr << get_fileline() << ": error: "
+					 << "Can't find task " << method_name
+					 << " in class " << cur->get_name()
+					 << endl;
+				    des->errors += 1;
+			      }
+			      return 0;
+			}
+			if (debug_elaborate) {
+			      cerr << get_fileline() << ": PCallTask::elaborate_method_: "
+				   << "Elaborate " << cur->get_name()
+				   << " method " << task->basename()
+				   << " via property chain " << sr.path_tail << endl;
+			}
+			return elaborate_build_call_(des, scope, task, use_this);
+		  }
+		  delete use_this;
 	    }
       }
 
@@ -4757,7 +4872,16 @@ NetProc* PCallTask::elaborate_method_(Design*des, NetScope*scope,
 	    NetESignal*use_this = new NetESignal(net);
 	    use_this->set_line(*this);
 
-	    return elaborate_build_call_(des, scope, task, use_this);
+	    bool super_call = false;
+	    for (pform_name_t::const_iterator it = path_.begin()
+		       ; it != path_.end() ; ++it) {
+		  if (it->name == perm_string::literal(SUPER_TOKEN)) {
+			super_call = true;
+			break;
+		  }
+	    }
+
+	    return elaborate_build_call_(des, scope, task, use_this, super_call);
       }
 
       return 0;
@@ -4845,7 +4969,8 @@ NetProc* PCallTask::elaborate_void_function_(Design*des, NetScope*scope,
 }
 
 NetProc* PCallTask::elaborate_build_call_(Design*des, NetScope*scope,
-					  NetScope*task, NetExpr*use_this) const
+					  NetScope*task, NetExpr*use_this,
+					  bool no_virt) const
 {
       const NetBaseDef*def = 0;
       if (task->type() == NetScope::TASK) {
@@ -4895,10 +5020,12 @@ NetProc* PCallTask::elaborate_build_call_(Design*des, NetScope*scope,
 
 	/* Detect the case where the definition of the task is known
 	   empty. In this case, we need not bother with calls to the
-	   task, all the assignments, etc. Just return a no-op. */
+	   task, all the assignments, etc. Just return a no-op.
+	   Exception: class methods may be overridden at runtime, so
+	   keep the call even when the static callee body is empty. */
 
       if (const NetBlock*tp = dynamic_cast<const NetBlock*>(def->proc())) {
-	    if (tp->proc_first() == 0) {
+	    if (tp->proc_first() == 0 && ! use_this) {
 		  if (debug_elaborate) {
 			cerr << get_fileline() << ": PCallTask::elaborate_build_call_: "
 			     << "Eliding call to empty task " << task->basename() << endl;
@@ -4993,6 +5120,7 @@ NetProc* PCallTask::elaborate_build_call_(Design*des, NetScope*scope,
 	/* Generate the task call proper... */
       NetUTask*cur = new NetUTask(task);
       cur->set_line(*this);
+      cur->set_no_virt(no_virt);
       block->append(cur);
 
 	/* Generate assignment statements for the output and INOUT
@@ -7556,6 +7684,9 @@ bool PPackage::elaborate(Design*des, NetScope*scope) const
 	// Elaborate task methods.
       elaborate_tasks(des, scope, tasks);
 
+	// Specialized C#(T) method bodies (may depend on peer classes).
+      des->elaborate_class_specializations();
+
 	// Elaborate class definitions.
       elaborate_classes(des, scope, classes);
 
@@ -7594,6 +7725,9 @@ bool Module::elaborate(Design*des, NetScope*scope) const
 	      // behaviors so that task calls may reference these, and after
 	      // the signals so that the tasks can reference them.
 	    elaborate_tasks(des, scope, tasks);
+
+	      // Specialized C#(T) method bodies (may depend on peer classes).
+	    des->elaborate_class_specializations();
 
 	      // Elaborate class definitions.
 	    elaborate_classes(des, scope, classes);
@@ -8417,8 +8551,10 @@ Design* elaborate(list<perm_string>roots)
 	// module and elaborate what I find.
       Design*des = new Design;
 
-	// Elaborate the compilation unit scopes. From here on, these are
-	// treated as an additional set of packages.
+	// Create compilation unit scopes first (shells only). Elaborate them
+	// after ordinary packages so $unit classes that extend an imported
+	// package base (e.g. uvm_object) see the base class already registered.
+      vector<elaborator_work_item_t*> unit_elaborate_work;
       if (gn_system_verilog()) {
 	    for (vector<PPackage*>::iterator pkg = pform_units.begin()
 		       ; pkg != pform_units.end() ; ++pkg) {
@@ -8428,14 +8564,12 @@ Design* elaborate(list<perm_string>roots)
 		  scope->add_imports(&unit->explicit_imports);
 		  set_scope_timescale(des, scope, unit);
 
-		  elaborator_work_item_t*es = new elaborate_package_t(des, scope, unit);
-		  des->elaboration_work_list.push_back(es);
-
 		  pack_elems[i].pack = unit;
 		  pack_elems[i].scope = scope;
 		  i += 1;
 
 		  unit_scopes[unit] = scope;
+		  unit_elaborate_work.push_back(new elaborate_package_t(des, scope, unit));
 	    }
       }
 
@@ -8460,6 +8594,10 @@ Design* elaborate(list<perm_string>roots)
 	    pack_elems[i].scope = scope;
 	    i += 1;
       }
+
+	// Now elaborate compilation units (after imported packages).
+      for (elaborator_work_item_t*es : unit_elaborate_work)
+	    des->elaboration_work_list.push_back(es);
 
 	// Scan the root modules by name, and elaborate their scopes.
       i = 0;

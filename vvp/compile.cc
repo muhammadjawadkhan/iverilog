@@ -127,6 +127,7 @@ static const struct opcode_table_s opcode_table[] = {
       { "%callf/virt/vec4", of_CALLF_VIRT_VEC4, 2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%callf/virt/void", of_CALLF_VIRT_VOID, 2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%callf/void",      of_CALLF_VOID,      2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
+      { "%callt/virt",      of_CALLT_VIRT,      2,{OA_CODE_PTR2,OA_VPI_PTR, OA_NONE} },
       { "%cassign/link",    of_CASSIGN_LINK,    2,{OA_FUNC_PTR,OA_FUNC_PTR2,OA_NONE} },
       { "%cassign/vec4",    of_CASSIGN_VEC4,    1,{OA_FUNC_PTR,OA_NONE,     OA_NONE} },
       { "%cassign/vec4/off",of_CASSIGN_VEC4_OFF,2,{OA_FUNC_PTR,OA_BIT1,     OA_NONE} },
@@ -138,6 +139,7 @@ static const struct opcode_table_s opcode_table[] = {
       { "%cast2",   of_CAST2,  0,  {OA_NONE,     OA_NONE,     OA_NONE} },
       { "%cmp/e",   of_CMPE,   0,  {OA_NONE,     OA_NONE,     OA_NONE} },
       { "%cmp/ne",  of_CMPNE,  0,  {OA_NONE,     OA_NONE,     OA_NONE} },
+      { "%cmp/obj", of_CMPOBJ, 0,  {OA_NONE,     OA_NONE,     OA_NONE} },
       { "%cmp/s",   of_CMPS,   0,  {OA_NONE,     OA_NONE,     OA_NONE} },
       { "%cmp/str", of_CMPSTR, 0,  {OA_NONE,     OA_NONE,     OA_NONE} },
       { "%cmp/u",   of_CMPU,   0,  {OA_NONE,     OA_NONE,     OA_NONE} },
@@ -827,24 +829,33 @@ void code_label_lookup(struct vvp_code_s *code, char *label, bool cptr2)
 }
 
 struct cmethod_resolv_list_s: public resolv_list_s {
-      explicit cmethod_resolv_list_s(char*lab, class_type*ct, char*mn)
-      : resolv_list_s(lab), clas(ct), mname(mn) { }
+      explicit cmethod_resolv_list_s(char*lab, class_type*ct, char*mn, char*slab)
+      : resolv_list_s(lab), clas(ct), mname(mn), scope_lab(slab) { }
       class_type*clas;
       char*mname;
+      char*scope_lab;
       virtual bool resolve(bool mes) override;
 };
 
 bool cmethod_resolv_list_s::resolve(bool mes)
 {
-      symbol_value_t val = sym_get_value(sym_codespace, label());
-      if (val.ptr) {
-	    clas->set_method(mname, reinterpret_cast<vvp_code_t>(val.ptr));
-	    delete[] mname;
-	    return true;
+      symbol_value_t cval = sym_get_value(sym_codespace, label());
+      symbol_value_t sval = sym_get_value(sym_vpi, scope_lab);
+      if (cval.ptr == 0 || sval.ptr == 0) {
+	    if (mes) {
+		  if (cval.ptr == 0)
+			fprintf(stderr, "unresolved cmethod code label: %s\n", label());
+		  if (sval.ptr == 0)
+			fprintf(stderr, "unresolved cmethod scope label: %s\n", scope_lab);
+	    }
+	    return false;
       }
-      if (mes)
-	    fprintf(stderr, "unresolved cmethod code label: %s\n", label());
-      return false;
+      clas->set_method(mname,
+		       reinterpret_cast<vvp_code_t>(cval.ptr),
+		       static_cast<__vpiScope*>(sval.ptr));
+      delete[] mname;
+      free(scope_lab);
+      return true;
 }
 
 void compile_cmethod(char*cname, char*mname, char*code_lab, char*scope_lab)
@@ -860,10 +871,9 @@ void compile_cmethod(char*cname, char*mname, char*code_lab, char*scope_lab)
 	    return;
       }
       struct cmethod_resolv_list_s*res
-	    = new struct cmethod_resolv_list_s(code_lab, ct, mname);
+	    = new struct cmethod_resolv_list_s(code_lab, ct, mname, scope_lab);
       resolv_submit(res);
       delete[] cname;
-      free(scope_lab);
 }
 
 struct code_array_resolv_list_s: public resolv_list_s {

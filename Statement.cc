@@ -167,19 +167,24 @@ PNamedItem::SymbolType PBlock::symbol_type() const
 }
 
 PCallTask::PCallTask(const pform_name_t &n, const list<named_pexpr_t> &p)
-: package_(0), path_(n), parms_(p.begin(), p.end())
+: package_(0), class_type_(0), path_(n), parms_(p.begin(), p.end())
 {
 }
 
 PCallTask::PCallTask(PPackage *pkg, const pform_name_t &n, const list<named_pexpr_t> &p)
-: package_(pkg), path_(n), parms_(p.begin(), p.end())
+: package_(pkg), class_type_(0), path_(n), parms_(p.begin(), p.end())
 {
 }
 
 PCallTask::PCallTask(perm_string n, const list<named_pexpr_t> &p)
-: package_(0), parms_(p.begin(), p.end())
+: package_(0), class_type_(0), parms_(p.begin(), p.end())
 {
       path_.push_back(name_component_t(n));
+}
+
+PCallTask::PCallTask(data_type_t* cls, const pform_name_t &n, const list<named_pexpr_t> &p)
+: package_(0), class_type_(cls), path_(n), parms_(p.begin(), p.end())
+{
 }
 
 PCallTask::~PCallTask()

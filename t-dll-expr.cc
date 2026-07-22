@@ -429,6 +429,12 @@ void dll_target::expr_property(const NetEProperty*net)
 	    index = expr_;
 	    expr_ = 0;
       }
+      ivl_expr_t base = 0;
+      if (const NetExpr*base_expr = net->get_base()) {
+	    base_expr->expr_scan(this);
+	    base = expr_;
+	    expr_ = 0;
+      }
       assert(expr_ == 0);
       expr_ = static_cast<ivl_expr_t>(calloc(1, sizeof(struct ivl_expr_s)));
       expr_->width_  = net->expr_width();
@@ -438,9 +444,11 @@ void dll_target::expr_property(const NetEProperty*net)
       FILE_NAME(expr_, net);
       expr_->value_  = net->expr_type();
       expr_->net_type= net->net_type();
-      expr_->u_.property_.sig = find_signal(des_, net->get_sig());
+      expr_->u_.property_.sig = net->get_sig()
+	    ? find_signal(des_, net->get_sig()) : 0;
       expr_->u_.property_.prop_idx = net->property_idx();
       expr_->u_.property_.index = index;
+      expr_->u_.property_.base = base;
 }
 
 void dll_target::expr_event(const NetEEvent*net)
@@ -667,6 +675,7 @@ void dll_target::expr_ufunc(const NetEUFunc*net)
       }
       ivl_assert(*net, expr->u_.ufunc_.def);
       ivl_assert(*net, expr->u_.ufunc_.def->type_ == IVL_SCT_FUNCTION);
+      expr->u_.ufunc_.no_virt = net->no_virt() ? 1 : 0;
 
       unsigned cnt = net->parm_count();
       expr->u_.ufunc_.parms = cnt;

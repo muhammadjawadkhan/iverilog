@@ -1,6 +1,6 @@
 # Sequences (Tier B)
 
-Status: **partial** — `uvm_sequence_item`, `uvm_sequencer`, `uvm_sequence` with `start` / `body` / `finish_item`.
+Status: **partial** — `uvm_sequence_item`, `uvm_sequencer`, `uvm_sequence` with `start` / virtual `body` / `finish_item`.
 
 Track: **muhammadjawadkhan/iverilog-uvm** only.
 
@@ -8,7 +8,7 @@ Track: **muhammadjawadkhan/iverilog-uvm** only.
 
 ```systemverilog
 class my_seq extends uvm_sequence;
-  task body();
+  virtual task body();
     my_item it = new;
     it.data = 99;
     start_item(it);
@@ -16,8 +16,8 @@ class my_seq extends uvm_sequence;
   endtask
 endclass
 
-seq.start(sqr); // binds sequencer only (no virt body call)
-seq.body();     // call on concrete derived handle
+uvm_sequence seq_h = seq;
+seq_h.start(sqr); // binds sequencer and runs virtual body()
 sqr.get_next_item(got);
 sqr.item_done();
 ```
@@ -26,7 +26,7 @@ sqr.item_done();
 |-----|--------|
 | `uvm_sequence_item` | `sequence_id`, `data` |
 | `uvm_sequencer` | `put_item` / `get_next_item` / `item_done` |
-| `uvm_sequence` | `start(sqr)` binds only; call `body` on concrete type |
+| `uvm_sequence` | `start(sqr)` binds + calls virtual `body()` |
 
 Channel is a **package-level** `mailbox #(uvm_sequence_item)` (one shared channel).
 
@@ -35,8 +35,7 @@ Channel is a **package-level** `mailbox #(uvm_sequence_item)` (one shared channe
 - No `uvm_sequence#(REQ,RSP)` / parameterized sequencer
 - No arbitration, grab/lock, response path
 - Mailbox arrays crash → not multi-sequencer isolated
-- **No virtual `body`** — `start()` does not call `body()`; invoke on a derived static type
-- No `uvm_driver` base (example pulls on sequencer directly)
+- Driver / analysis: see [driver.md](driver.md)
 
 ## Example
 

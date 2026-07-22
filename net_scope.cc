@@ -31,6 +31,7 @@
 # include  <cstring>
 # include  <cstdlib>
 # include  <sstream>
+# include  <set>
 # include  "ivl_assert.h"
 
 using namespace std;
@@ -244,14 +245,33 @@ NetScope*NetScope::find_typedef_scope(const Design*des, const typedef_t*type_i)
       ivl_assert(*this, type_i);
 
       NetScope *cur_scope = this;
+	// Guard against import cycles. A wildcard import at $unit whose target
+	// package has $unit as its parent otherwise bounces $unit->pkg->$unit
+	// forever (e.g. a $unit-scope class extending a package base class).
+      std::set<const NetScope*> visited;
       while (cur_scope) {
+	    if (!visited.insert(cur_scope).second)
+		  break;
+
 	    auto it = cur_scope->typedefs_.find(type_i->name);
 	    if (it != cur_scope->typedefs_.end() && it->second == type_i)
 		  return cur_scope;
+
+	      // Class names are registered as classes, not typedefs. When the
+	      // definition is visible in this scope, match it by name too.
+	    if (cur_scope->classes_.find(type_i->name) != cur_scope->classes_.end())
+		  return cur_scope;
+
 	    NetScope*import_scope = cur_scope->find_import(des, type_i->name);
-	    if (import_scope)
+	    if (import_scope && visited.find(import_scope) == visited.end()) {
+		    // Imported typedefs are distinct objects from the
+		    // referencing scope's forward decl; match by name.
+		  if (import_scope->typedefs_.find(type_i->name) != import_scope->typedefs_.end())
+			return import_scope;
+		  if (import_scope->classes_.find(type_i->name) != import_scope->classes_.end())
+			return import_scope;
 		  cur_scope = import_scope;
-	    else if (cur_scope == unit_)
+	    } else if (cur_scope == unit_)
 		  return 0;
 	    else
 		  cur_scope = cur_scope->parent();
@@ -391,6 +411,23 @@ void NetScope::replace_parameter(Design *des, perm_string key, PExpr*val,
 
       ref.val_expr = val;
       ref.val_scope = scope;
+}
+
+bool NetScope::force_parameter_override(perm_string key, PExpr*val,
+					NetScope*val_scope)
+{
+      if (parameters.find(key) == parameters.end())
+	    return false;
+
+      param_expr_t&ref = parameters[key];
+      if (ref.local_flag)
+	    return false;
+
+      ref.val_expr = val;
+      ref.val_scope = val_scope ? val_scope : this;
+      ref.val = 0;
+      ref.ivl_type = 0;
+      return true;
 }
 
 bool NetScope::make_parameter_unannotatable(perm_string key)

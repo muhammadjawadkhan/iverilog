@@ -312,6 +312,7 @@ struct ivl_expr_s {
 		  ivl_scope_t def;
 		  ivl_expr_t  *parm;
 		  unsigned    parms;
+		  unsigned    no_virt; /* 1 = force non-virtual call (super) */
 	    } ufunc_;
 
 	    struct {
@@ -341,6 +342,7 @@ struct ivl_expr_s {
 		  ivl_signal_t sig;
 		  unsigned prop_idx;
 		  ivl_expr_t index;
+		  ivl_expr_t base; /* nested class expr, else 0 */
 	    } property_;
       } u_;
 };
@@ -864,6 +866,7 @@ struct ivl_statement_s {
 
 	    struct { /* IVL_ST_UTASK */
 		  ivl_scope_t def;
+		  unsigned no_virt; /* 1 = force non-virtual call (super) */
 	    } utask_;
 
 	    struct { /* IVL_ST_TRIGGER IVL_ST_NB_TRIGGER IVL_ST_WAIT */

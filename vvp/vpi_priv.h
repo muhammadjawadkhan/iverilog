@@ -704,6 +704,7 @@ class __vpiBaseVar : public __vpiHandle {
 #endif
 
       inline vvp_net_t* get_net() const { return net_; }
+      inline const char* basename() const { return name_; }
 
     protected:
       __vpiScope* scope_;

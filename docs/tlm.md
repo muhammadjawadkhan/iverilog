@@ -24,7 +24,8 @@ gp.get(x);
 ## Gaps
 
 - No parameterized `uvm_*_port#(T)` (needs `C#(T)` specialization)
-- No analysis ports / exports / imps hierarchy
+- Analysis: fixed multi-subscriber `uvm_analysis_port` / `uvm_subscriber`
+  (see [driver.md](driver.md)); no exports / imps hierarchy
 - Class-handle / object TLM (no class-handle queues; mailbox not a class property)
 - Legacy `ivl_uvm_tlm_pull_*` remains but is separate
 

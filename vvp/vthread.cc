@@ -1529,11 +1529,13 @@ static bool do_callf_void(vthread_t thr, vthread_t child)
         // This should be the only child
       assert(thr->children.size()==1);
 
-        // Execute the function. This SHOULD run the function to completion,
-        // but there are some exceptional situations where it won't.
-      assert(child->parent_scope->get_type_code() == vpiFunction);
+      int tcode = child->parent_scope->get_type_code();
+      assert(tcode == vpiFunction || tcode == vpiTask);
+
       child->is_scheduled = 1;
-      child->i_am_in_function = 1;
+	/* Tasks may block (delay/wait); do not mark them as in-function. */
+      if (tcode == vpiFunction)
+	    child->i_am_in_function = 1;
       vthread_run(child);
       running_thread = thr;
 
@@ -1599,86 +1601,283 @@ bool of_CALLF_VOID(vthread_t thr, vvp_code_t cp)
 
 /*
  * Virtual class-method call: arguments and `this` are already stored in
- * the statically elaborated (fallback) scope. Look up the override code
- * from the runtime type of `this` and execute that code against the
- * fallback scope's automatic storage.
+ * the statically elaborated (fallback) scope. Look up the override on the
+ * runtime type of `this`. If the override lives in a different automatic
+ * scope, allocate it, copy ports from the fallback context, run there, then
+ * copy the object return value back (draw_ufunc loads the fallback return).
  */
+static vvp_object_t read_auto_object(vvp_net_t*net, vvp_context_t ctx)
+{
+      vvp_fun_signal_object*fun = dynamic_cast<vvp_fun_signal_object*>(net->fun);
+      if (fun == 0)
+	    return vvp_object_t();
+      vvp_context_t save_rd = running_thread ? running_thread->rd_context : 0;
+      if (running_thread)
+	    running_thread->rd_context = ctx;
+      vvp_object_t val = fun->get_object();
+      if (running_thread)
+	    running_thread->rd_context = save_rd;
+      return val;
+}
+
+static std::string read_auto_string(vvp_net_t*net, vvp_context_t ctx)
+{
+      vvp_fun_signal_string*fun = dynamic_cast<vvp_fun_signal_string*>(net->fun);
+      if (fun == 0)
+	    return std::string();
+      vvp_context_t save_rd = running_thread ? running_thread->rd_context : 0;
+      if (running_thread)
+	    running_thread->rd_context = ctx;
+      std::string val = fun->get_string();
+      if (running_thread)
+	    running_thread->rd_context = save_rd;
+      return val;
+}
+
+static void write_auto_object(vvp_net_t*net, const vvp_object_t&val, vvp_context_t ctx)
+{
+      vvp_net_ptr_t ptr(net, 0);
+      vvp_send_object(ptr, val, ctx);
+}
+
+static void write_auto_string(vvp_net_t*net, const std::string&val, vvp_context_t ctx)
+{
+      vvp_net_ptr_t ptr(net, 0);
+      vvp_send_string(ptr, val, ctx);
+}
+
+static vvp_vector4_t read_auto_vec4(vvp_net_t*net, vvp_context_t ctx)
+{
+      vvp_signal_value*sig = dynamic_cast<vvp_signal_value*>(net->fun);
+      if (sig == 0)
+	    sig = dynamic_cast<vvp_signal_value*>(net->fil);
+      if (sig == 0)
+	    return vvp_vector4_t();
+      vvp_context_t save_rd = running_thread ? running_thread->rd_context : 0;
+      if (running_thread)
+	    running_thread->rd_context = ctx;
+      vvp_vector4_t val;
+      sig->vec4_value(val);
+      if (running_thread)
+	    running_thread->rd_context = save_rd;
+      return val;
+}
+
+static void write_auto_vec4(vvp_net_t*net, const vvp_vector4_t&val, vvp_context_t ctx)
+{
+      vvp_net_ptr_t ptr(net, 0);
+      vvp_send_vec4(ptr, val, ctx);
+}
+
+static double read_auto_real(vvp_net_t*net, vvp_context_t ctx)
+{
+      vvp_fun_signal_real*fun = dynamic_cast<vvp_fun_signal_real*>(net->fun);
+      if (fun == 0)
+	    return 0.0;
+      vvp_context_t save_rd = running_thread ? running_thread->rd_context : 0;
+      if (running_thread)
+	    running_thread->rd_context = ctx;
+      double val = fun->real_unfiltered_value();
+      if (running_thread)
+	    running_thread->rd_context = save_rd;
+      return val;
+}
+
+static void write_auto_real(vvp_net_t*net, double val, vvp_context_t ctx)
+{
+      vvp_net_ptr_t ptr(net, 0);
+      vvp_send_real(ptr, val, ctx);
+}
+
+static bool scope_var_info(__vpiHandle*h, const char*&name, vvp_net_t*&net)
+{
+      if (__vpiBaseVar*bv = dynamic_cast<__vpiBaseVar*>(h)) {
+	    name = bv->basename();
+	    net = bv->get_net();
+	    return name != 0 && net != 0;
+      }
+      if (__vpiSignal*sig = dynamic_cast<__vpiSignal*>(h)) {
+	    if (sig->is_netarray)
+		  return false;
+	    name = sig->id.name;
+	    net = sig->node;
+	    return name != 0 && net != 0;
+      }
+      if (__vpiRealVar*rv = dynamic_cast<__vpiRealVar*>(h)) {
+	    if (rv->is_netarray)
+		  return false;
+	    name = rv->id.name;
+	    net = rv->net;
+	    return name != 0 && net != 0;
+      }
+      return false;
+}
+
+static bool find_named_net(__vpiScope*scope, const char*name, vvp_net_t*&net)
+{
+      for (size_t idx = 0 ; idx < scope->intern.size() ; idx += 1) {
+	    const char*n = 0;
+	    vvp_net_t*tmp = 0;
+	    if (! scope_var_info(scope->intern[idx], n, tmp))
+		  continue;
+	    if (strcmp(n, name) == 0) {
+		  net = tmp;
+		  return true;
+	    }
+      }
+      return false;
+}
+
 static vvp_object_t get_method_this(vthread_t thr, __vpiScope*scope)
 {
-	/* Automatic `@` lives in wt_context after %alloc/%store; get_object
-	   for aa signals reads rd_context. Align them for the lookup. */
       vvp_context_t save_rd = thr->rd_context;
       thr->rd_context = thr->wt_context;
-
       vvp_object_t result;
-      for (size_t idx = 0 ; idx < scope->intern.size() ; idx += 1) {
-	    __vpiCobjectVar*cv = dynamic_cast<__vpiCobjectVar*>(scope->intern[idx]);
-	    if (cv == 0)
-		  continue;
-	    vvp_net_t*net = cv->get_net();
+      vvp_net_t*net = 0;
+      if (find_named_net(scope, "@", net)) {
 	    vvp_fun_signal_object*fun = dynamic_cast<vvp_fun_signal_object*>(net->fun);
-	    if (fun == 0)
-		  continue;
-	    result = fun->get_object();
-	    break;
+	    if (fun)
+		  result = fun->get_object();
       }
-
       thr->rd_context = save_rd;
       return result;
 }
 
-static vvp_code_t resolve_virt_code(vthread_t thr, vvp_code_t cp)
+static void copy_scope_ports(__vpiScope*from, __vpiScope*to,
+			     vvp_context_t from_ctx, vvp_context_t to_ctx)
 {
+      for (size_t idx = 0 ; idx < from->intern.size() ; idx += 1) {
+	    const char*name = 0;
+	    vvp_net_t*fnet = 0;
+	    if (! scope_var_info(from->intern[idx], name, fnet))
+		  continue;
+	    vvp_net_t*tnet = 0;
+	    if (! find_named_net(to, name, tnet))
+		  continue;
+	    if (dynamic_cast<vvp_fun_signal_object*>(fnet->fun)) {
+		  write_auto_object(tnet, read_auto_object(fnet, from_ctx), to_ctx);
+	    } else if (dynamic_cast<vvp_fun_signal_string*>(fnet->fun)) {
+		  write_auto_string(tnet, read_auto_string(fnet, from_ctx), to_ctx);
+	    } else if (dynamic_cast<vvp_fun_signal_real*>(fnet->fun)) {
+		  write_auto_real(tnet, read_auto_real(fnet, from_ctx), to_ctx);
+	    } else if (dynamic_cast<vvp_fun_signal_vec*>(fnet->fun)
+			|| dynamic_cast<vvp_signal_value*>(fnet->fun)) {
+		  write_auto_vec4(tnet, read_auto_vec4(fnet, from_ctx), to_ctx);
+	    }
+      }
+}
+
+enum virt_ret_t { VIRT_RET_VOID, VIRT_RET_STR, VIRT_RET_REAL, VIRT_RET_VEC4, VIRT_RET_OBJ };
+
+static bool do_callf_virt(vthread_t thr, vvp_code_t cp, virt_ret_t rkind)
+{
+      __vpiScope*fallback = cp->scope;
       vvp_code_t code = cp->cptr2;
-      __vpiScope*scope = cp->scope;
-      vvp_object_t this_obj = get_method_this(thr, scope);
-      if (this_obj.test_nil())
-	    return code;
-      vvp_cobject*cobj = this_obj.peek<vvp_cobject>();
-      if (cobj == 0 || cobj->get_defn() == 0)
-	    return code;
-      const class_type::method_t*m = cobj->get_defn()->find_method(scope->scope_name());
-      if (m && m->code)
-	    return m->code;
-      return code;
+      __vpiScope*use = fallback;
+
+      vvp_object_t this_obj = get_method_this(thr, fallback);
+      if (! this_obj.test_nil()) {
+	    vvp_cobject*cobj = this_obj.peek<vvp_cobject>();
+	    if (cobj && cobj->get_defn()) {
+		  const class_type::method_t*m =
+			cobj->get_defn()->find_method(fallback->scope_name());
+		  if (m && m->code) {
+			code = m->code;
+			if (m->scope)
+			      use = m->scope;
+		  }
+	    }
+      }
+
+      vvp_context_t fb_ctx = thr->wt_context;
+      vvp_context_t use_ctx = fb_ctx;
+      bool switched = false;
+
+      if (use != fallback && use->is_automatic()) {
+	    use_ctx = vthread_alloc_context(use);
+	    vvp_set_stacked_context(use_ctx, thr->wt_context);
+	    thr->wt_context = use_ctx;
+	    copy_scope_ports(fallback, use, fb_ctx, use_ctx);
+	    switched = true;
+      }
+
+      vthread_t child = vthread_new(code, use);
+      switch (rkind) {
+	  case VIRT_RET_STR:
+	    thr->push_str("");
+	    child->args_str.push_back(0);
+	    break;
+	  case VIRT_RET_REAL:
+	    thr->push_real(0.0);
+	    child->args_real.push_back(0);
+	    break;
+	  case VIRT_RET_VEC4: {
+		vpiScopeFunction*sf = dynamic_cast<vpiScopeFunction*>(fallback);
+		assert(sf);
+		thr->push_vec4(vvp_vector4_t(sf->get_func_width(), sf->get_func_init_val()));
+		child->args_vec4.push_back(0);
+		break;
+	  }
+	  default:
+	    break;
+      }
+
+      bool ok = do_callf_void(thr, child);
+
+	/* do_join moved use_ctx from wt onto rd (wt == fb_ctx). Free the
+	   override context, then move fb_ctx onto rd so %load/%free see the
+	   statically allocated fallback scope. */
+      if (switched) {
+	    if (rkind == VIRT_RET_OBJ) {
+		  vvp_net_t*rnet = 0;
+		  vvp_net_t*fnet = 0;
+		  if (find_named_net(use, use->scope_name(), rnet)
+		      && find_named_net(fallback, fallback->scope_name(), fnet)) {
+			vvp_object_t ret = read_auto_object(rnet, use_ctx);
+			write_auto_object(fnet, ret, fb_ctx);
+		  }
+	    }
+	    thr->rd_context = vvp_get_stacked_context(use_ctx);
+	    vthread_free_context(use_ctx, use);
+
+	    if (thr->wt_context == fb_ctx && thr->wt_context != thr->rd_context) {
+		  thr->wt_context = vvp_get_stacked_context(fb_ctx);
+		  vvp_set_stacked_context(fb_ctx, thr->rd_context);
+		  thr->rd_context = fb_ctx;
+	    }
+      }
+
+      return ok;
 }
 
 bool of_CALLF_VIRT_OBJ(vthread_t thr, vvp_code_t cp)
 {
-      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
-      return do_callf_void(thr, child);
+      return do_callf_virt(thr, cp, VIRT_RET_OBJ);
 }
 
 bool of_CALLF_VIRT_REAL(vthread_t thr, vvp_code_t cp)
 {
-      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
-      thr->push_real(0.0);
-      child->args_real.push_back(0);
-      return do_callf_void(thr, child);
+      return do_callf_virt(thr, cp, VIRT_RET_REAL);
 }
 
 bool of_CALLF_VIRT_STR(vthread_t thr, vvp_code_t cp)
 {
-      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
-      thr->push_str("");
-      child->args_str.push_back(0);
-      return do_callf_void(thr, child);
+      return do_callf_virt(thr, cp, VIRT_RET_STR);
 }
 
 bool of_CALLF_VIRT_VEC4(vthread_t thr, vvp_code_t cp)
 {
-      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
-      vpiScopeFunction*scope_func = dynamic_cast<vpiScopeFunction*>(cp->scope);
-      assert(scope_func);
-      thr->push_vec4(vvp_vector4_t(scope_func->get_func_width(), scope_func->get_func_init_val()));
-      child->args_vec4.push_back(0);
-      return do_callf_void(thr, child);
+      return do_callf_virt(thr, cp, VIRT_RET_VEC4);
 }
 
 bool of_CALLF_VIRT_VOID(vthread_t thr, vvp_code_t cp)
 {
-      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
-      return do_callf_void(thr, child);
+      return do_callf_virt(thr, cp, VIRT_RET_VOID);
+}
+
+bool of_CALLT_VIRT(vthread_t thr, vvp_code_t cp)
+{
+      return do_callf_virt(thr, cp, VIRT_RET_VOID);
 }
 
 /*
@@ -2199,6 +2398,24 @@ bool of_CMPSTR(vthread_t thr, vvp_code_t)
 
       thr->flags[4] = eq;
       thr->flags[5] = lt;
+
+      return true;
+}
+
+bool of_CMPOBJ(vthread_t thr, vvp_code_t)
+{
+      vvp_object_t re;
+      vvp_object_t le;
+      thr->pop_object(re);
+      thr->pop_object(le);
+
+      if (le == re) {
+	    thr->flags[4] = BIT4_1;
+	    thr->flags[5] = BIT4_0;
+      } else {
+	    thr->flags[4] = BIT4_0;
+	    thr->flags[5] = BIT4_0;
+      }
 
       return true;
 }

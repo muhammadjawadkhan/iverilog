@@ -212,8 +212,13 @@ NetENull* NetENull::dup_expr() const
 
 NetEProperty* NetEProperty::dup_expr() const
 {
-      NetEProperty*tmp = new NetEProperty(net_, pidx_,
-					  index_ ? index_->dup_expr() : 0);
+      NetEProperty*tmp;
+      if (base_)
+	    tmp = new NetEProperty(base_->dup_expr(), pidx_,
+				   index_ ? index_->dup_expr() : 0);
+      else
+	    tmp = new NetEProperty(net_, pidx_,
+				   index_ ? index_->dup_expr() : 0);
       tmp->set_line(*this);
       return tmp;
 }
@@ -295,6 +300,7 @@ NetEUFunc* NetEUFunc::dup_expr() const
 
       ivl_assert(*this, tmp);
       tmp->set_line(*this);
+      tmp->set_no_virt(no_virt_);
       return tmp;
 }
 

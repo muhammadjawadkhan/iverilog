@@ -398,7 +398,7 @@ NetENull::~NetENull()
 }
 
 NetEProperty::NetEProperty(NetNet*net, size_t pidx, NetExpr*idx)
-: net_(net), pidx_(pidx), index_(idx)
+: net_(net), base_(0), pidx_(pidx), index_(idx)
 {
       const netclass_t*use_type = dynamic_cast<const netclass_t*>(net->net_type());
       ivl_assert(*this, use_type);
@@ -413,8 +413,26 @@ NetEProperty::NetEProperty(NetNet*net, size_t pidx, NetExpr*idx)
       }
 }
 
+NetEProperty::NetEProperty(NetExpr*base, size_t pidx, NetExpr*idx)
+: net_(0), base_(base), pidx_(pidx), index_(idx)
+{
+      ivl_assert(*this, base);
+      const netclass_t*use_type = dynamic_cast<const netclass_t*>(base->net_type());
+      ivl_assert(*this, use_type);
+
+      ivl_type_t prop_type = use_type->get_prop_type(pidx_);
+      if (idx) {
+	    auto array_type = dynamic_cast<const netarray_t*>(prop_type);
+	    ivl_assert(*this, array_type);
+	    set_net_type(array_type->element_type());
+      } else {
+	    set_net_type(prop_type);
+      }
+}
+
 NetEProperty::~NetEProperty()
 {
+      delete base_;
 }
 
 NetESelect::NetESelect(NetExpr*exp, NetExpr*base, unsigned wid,

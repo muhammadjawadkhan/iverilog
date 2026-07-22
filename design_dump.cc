@@ -1860,7 +1860,13 @@ void NetENull::dump(ostream&o) const
 
 void NetEProperty::dump(ostream&o) const
 {
-      o << net_->name() << ".<" << pidx_ << ">";
+      if (base_)
+	    o << "(" << *base_ << ")";
+      else if (net_)
+	    o << net_->name();
+      else
+	    o << "<prop>";
+      o << ".<" << pidx_ << ">";
       if (index_)
 	    o << "[" << *index_ << "]";
 }

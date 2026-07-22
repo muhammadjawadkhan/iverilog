@@ -238,3 +238,41 @@ bool pform_in_class()
 {
       return pform_cur_class != 0;
 }
+
+LexicalScope* pform_find_class_scope(perm_string name)
+{
+      LexicalScope*cur = pform_peek_scope();
+      while (cur) {
+	    if (PClass*pc = dynamic_cast<PClass*>(cur)) {
+		  if (pc->pscope_name() == name)
+			return pc;
+	    }
+	    if (PScopeExtra*sx = dynamic_cast<PScopeExtra*>(cur)) {
+		  map<perm_string,PClass*>::iterator it = sx->classes.find(name);
+		  if (it != sx->classes.end())
+			return it->second;
+	    }
+	    cur = cur->parent_scope();
+      }
+      return 0;
+}
+
+LexicalScope* pform_class_scope_from_type(data_type_t*dt)
+{
+      if (dt == 0)
+	    return 0;
+
+      if (typeref_t*tr = dynamic_cast<typeref_t*>(dt)) {
+	    typedef_t*td = tr->get_typedef();
+	    if (td == 0)
+		  return 0;
+	    if (const class_type_t*ct = dynamic_cast<const class_type_t*>(td->get_data_type()))
+		  return pform_find_class_scope(ct->name);
+	    return pform_find_class_scope(td->name);
+      }
+
+      if (class_type_t*ct = dynamic_cast<class_type_t*>(dt))
+	    return pform_find_class_scope(ct->name);
+
+      return 0;
+}

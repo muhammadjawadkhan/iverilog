@@ -82,6 +82,7 @@ extern UCDriveType uc_drive;
  * that the lexor can interpret <foo> in the package context.
  */
 extern void lex_in_package_scope(PPackage*pkg);
+extern void lex_in_class_scope(LexicalScope*cls);
 
 /*
  * Test if this identifier is a type identifier in the current
@@ -91,6 +92,13 @@ extern void lex_in_package_scope(PPackage*pkg);
  */
 extern typedef_t* pform_test_type_identifier(const YYLTYPE&loc, const char*txt);
 extern typedef_t* pform_test_type_identifier(PPackage*pkg, const char*txt);
+extern typedef_t* pform_test_type_identifier(LexicalScope*scope, const char*txt);
+
+/*
+ * Find a class lexical scope by typedef / class type name.
+ */
+extern LexicalScope* pform_find_class_scope(perm_string name);
+extern LexicalScope* pform_class_scope_from_type(data_type_t*dt);
 
 /*
  * Test if this identifier is a package name. The pform needs to help

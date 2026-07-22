@@ -938,6 +938,8 @@ extern const char* ivl_expr_bits(ivl_expr_t net);
 extern ivl_branch_t ivl_expr_branch(ivl_expr_t net);
   /* IVL_EX_UFUNC */
 extern ivl_scope_t ivl_expr_def(ivl_expr_t net);
+  /* IVL_EX_UFUNC: non-zero if call must not use virtual dispatch (super.method) */
+extern int         ivl_expr_ufunc_no_virt(ivl_expr_t net);
   /* IVL_EX_DELAY */
 extern uint64_t ivl_expr_delay_val(ivl_expr_t net);
   /* IVL_EX_REALNUM */
@@ -2264,6 +2266,8 @@ extern ivl_scope_t ivl_stmt_block_scope(ivl_statement_t net);
 extern ivl_statement_t ivl_stmt_block_stmt(ivl_statement_t net, unsigned i);
   /* IVL_ST_UTASK IVL_ST_DISABLE */
 extern ivl_scope_t ivl_stmt_call(ivl_statement_t net);
+  /* IVL_ST_UTASK: non-zero if call must not use virtual dispatch (super.method) */
+extern int         ivl_stmt_utask_no_virt(ivl_statement_t net);
   /* IVL_ST_CASE,IVL_ST_CASER,IVL_ST_CASEX,IVL_ST_CASEZ */
 extern unsigned ivl_stmt_case_count(ivl_statement_t net);
   /* IVL_ST_CASE,IVL_ST_CASER,IVL_ST_CASEX,IVL_ST_CASEZ */

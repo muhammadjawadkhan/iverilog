@@ -1,4 +1,4 @@
-// Tier B #1 smoke: name-based factory register / resolve / create / override.
+// Tier B #1 smoke: TYPE::type_id::get() + factory create / override.
 `timescale 1ns/1ps
 
 module factory_basic;
@@ -21,54 +21,13 @@ module factory_basic;
     `ivl_uvm_object_utils(pkt_ext)
   endclass
 
-  class pkt_wrapper extends uvm_object_wrapper;
-    function new();
-      super.new("pkt");
-    endfunction
-    function uvm_object create_object(string name = "");
-      pkt o;
-      o = new(name);
-      return o;
-    endfunction
-  endclass
-
-  class pkt_ext_wrapper extends uvm_object_wrapper;
-    function new();
-      super.new("pkt_ext");
-    endfunction
-    function uvm_object create_object(string name = "");
-      pkt_ext o;
-      o = new(name);
-      return o;
-    endfunction
-  endclass
-
-  function uvm_object make_by_name(uvm_factory fac, string requested, string name);
-    string actual;
-    uvm_object_wrapper w;
-    pkt_wrapper pw;
-    pkt_ext_wrapper pew;
-    bit ok;
-    actual = fac.resolve_type_name(requested);
-    w = fac.find_by_name(actual);
-    ok = $cast(pw, w);
-    if (ok)
-      return pw.create_object(name);
-    ok = $cast(pew, w);
-    if (ok)
-      return pew.create_object(name);
-    $display("UVM_ERROR @ 0: reporter [FCTTYP] Type '%s' not registered", actual);
-    return null;
-  endfunction
-
-  pkt_wrapper        w_pkt;
-  pkt_ext_wrapper    w_ext;
+  pkt::type_id       w_pkt;
+  pkt_ext::type_id   w_ext;
   uvm_factory        f;
   uvm_object         obj;
   pkt                p;
   pkt_ext            pe;
   uvm_object_wrapper found;
-  pkt_wrapper        found_pkt;
   bit                ok;
   int                pass;
   string             actual;
@@ -76,16 +35,30 @@ module factory_basic;
   initial begin
     pass = 1;
 
-    w_pkt = new;
-    w_ext = new;
+    // Accellera-shaped singleton registration via typed type_id::get().
+    w_pkt = pkt::type_id::get();
+    if (w_pkt == null) begin
+      $display("FAIL: pkt::type_id::get");
+      pass = 0;
+    end
+    w_ext = pkt_ext::type_id::get();
+    if (w_ext == null) begin
+      $display("FAIL: pkt_ext::type_id::get");
+      pass = 0;
+    end
     f = uvm_get_factory();
-    f.register(w_pkt);
-    f.register(w_ext);
 
-    obj = make_by_name(f, "pkt", "p0");
+    obj = f.create_object_by_name("pkt", "", "p0");
     ok = $cast(p, obj);
     if (!ok || p.kind !== 1) begin
       $display("FAIL: create pkt ok=%0b", ok);
+      pass = 0;
+    end
+
+    // Also exercise TYPE::type_id::create (static).
+    p = pkt::type_id::create("p0b");
+    if (p == null || p.kind !== 1) begin
+      $display("FAIL: type_id::create");
       pass = 0;
     end
 
@@ -96,7 +69,7 @@ module factory_basic;
       pass = 0;
     end
 
-    obj = make_by_name(f, "pkt", "p1");
+    obj = f.create_object_by_name("pkt", "", "p1");
     ok = $cast(pe, obj);
     if (!ok || pe.kind !== 2) begin
       $display("FAIL: override create ok=%0b", ok);
@@ -104,8 +77,7 @@ module factory_basic;
     end
 
     found = f.find_by_name("pkt");
-    ok = $cast(found_pkt, found);
-    if (!ok) begin
+    if (found == null) begin
       $display("FAIL: find_by_name pkt");
       pass = 0;
     end

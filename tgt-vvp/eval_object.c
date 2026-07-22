@@ -272,8 +272,9 @@ static int eval_object_null(ivl_expr_t ex)
 
 static int eval_object_property(ivl_expr_t expr)
 {
-      ivl_signal_t sig = ivl_expr_signal(expr);
       unsigned pidx = ivl_expr_property_idx(expr);
+      ivl_expr_t base = ivl_expr_oper2(expr);
+      int errors = 0;
 
       int idx = 0;
       ivl_expr_t idx_expr = 0;
@@ -286,12 +287,20 @@ static int eval_object_property(ivl_expr_t expr)
 	    draw_eval_expr_into_integer(idx_expr, idx);
       }
 
-      fprintf(vvp_out, "    %%load/obj v%p_0;\n", sig);
+	/* Nested property (obj.a.b): evaluate base object first.
+	   Otherwise load the root class handle from its signal. */
+      if (base) {
+	    errors += draw_eval_object(base);
+      } else {
+	    ivl_signal_t sig = ivl_expr_signal(expr);
+	    assert(sig);
+	    fprintf(vvp_out, "    %%load/obj v%p_0;\n", sig);
+      }
       fprintf(vvp_out, "    %%prop/obj %u, %d; eval_object_property\n", pidx, idx);
       fprintf(vvp_out, "    %%pop/obj 1, 1;\n");
 
       if (idx != 0) clr_word(idx);
-      return 0;
+      return errors;
 }
 
 static int eval_object_shallowcopy(ivl_expr_t ex)
