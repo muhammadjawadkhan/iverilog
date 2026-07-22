@@ -1598,6 +1598,90 @@ bool of_CALLF_VOID(vthread_t thr, vvp_code_t cp)
 }
 
 /*
+ * Virtual class-method call: arguments and `this` are already stored in
+ * the statically elaborated (fallback) scope. Look up the override code
+ * from the runtime type of `this` and execute that code against the
+ * fallback scope's automatic storage.
+ */
+static vvp_object_t get_method_this(vthread_t thr, __vpiScope*scope)
+{
+	/* Automatic `@` lives in wt_context after %alloc/%store; get_object
+	   for aa signals reads rd_context. Align them for the lookup. */
+      vvp_context_t save_rd = thr->rd_context;
+      thr->rd_context = thr->wt_context;
+
+      vvp_object_t result;
+      for (size_t idx = 0 ; idx < scope->intern.size() ; idx += 1) {
+	    __vpiCobjectVar*cv = dynamic_cast<__vpiCobjectVar*>(scope->intern[idx]);
+	    if (cv == 0)
+		  continue;
+	    vvp_net_t*net = cv->get_net();
+	    vvp_fun_signal_object*fun = dynamic_cast<vvp_fun_signal_object*>(net->fun);
+	    if (fun == 0)
+		  continue;
+	    result = fun->get_object();
+	    break;
+      }
+
+      thr->rd_context = save_rd;
+      return result;
+}
+
+static vvp_code_t resolve_virt_code(vthread_t thr, vvp_code_t cp)
+{
+      vvp_code_t code = cp->cptr2;
+      __vpiScope*scope = cp->scope;
+      vvp_object_t this_obj = get_method_this(thr, scope);
+      if (this_obj.test_nil())
+	    return code;
+      vvp_cobject*cobj = this_obj.peek<vvp_cobject>();
+      if (cobj == 0 || cobj->get_defn() == 0)
+	    return code;
+      const class_type::method_t*m = cobj->get_defn()->find_method(scope->scope_name());
+      if (m && m->code)
+	    return m->code;
+      return code;
+}
+
+bool of_CALLF_VIRT_OBJ(vthread_t thr, vvp_code_t cp)
+{
+      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
+      return do_callf_void(thr, child);
+}
+
+bool of_CALLF_VIRT_REAL(vthread_t thr, vvp_code_t cp)
+{
+      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
+      thr->push_real(0.0);
+      child->args_real.push_back(0);
+      return do_callf_void(thr, child);
+}
+
+bool of_CALLF_VIRT_STR(vthread_t thr, vvp_code_t cp)
+{
+      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
+      thr->push_str("");
+      child->args_str.push_back(0);
+      return do_callf_void(thr, child);
+}
+
+bool of_CALLF_VIRT_VEC4(vthread_t thr, vvp_code_t cp)
+{
+      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
+      vpiScopeFunction*scope_func = dynamic_cast<vpiScopeFunction*>(cp->scope);
+      assert(scope_func);
+      thr->push_vec4(vvp_vector4_t(scope_func->get_func_width(), scope_func->get_func_init_val()));
+      child->args_vec4.push_back(0);
+      return do_callf_void(thr, child);
+}
+
+bool of_CALLF_VIRT_VOID(vthread_t thr, vvp_code_t cp)
+{
+      vthread_t child = vthread_new(resolve_virt_code(thr, cp), cp->scope);
+      return do_callf_void(thr, child);
+}
+
+/*
  * The %cassign/link instruction connects a source node to a
  * destination node. The destination node must be a signal, as it is
  * marked with the source of the cassign so that it may later be
@@ -2957,7 +3041,11 @@ bool of_DISABLE_FLOW(vthread_t thr, vvp_code_t cp)
       while (cur && cur->parent_scope != scope)
 	    cur = cur->parent;
 
-      assert(cur);
+	/* Virtual dispatch may run override code against a different
+	   (statically elaborated) automatic scope; disable self. */
+      if (cur == 0)
+	    cur = thr;
+
       if (cur)
 	    return !do_disable(cur, thr);
 

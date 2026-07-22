@@ -1597,8 +1597,11 @@ static int show_stmt_utask(ivl_statement_t net)
       if (ivl_scope_type(task) == IVL_SCT_FUNCTION) {
 	      // A function called as a task is (presumably) a void function.
 	      // Use the %callf/void instruction to call it.
-	    fprintf(vvp_out, "    %%callf/void TD_%s",
-		    vvp_mangle_id(ivl_scope_name(task)));
+	    ivl_scope_t parent = ivl_scope_parent(task);
+	    const char*callf = (parent && ivl_scope_type(parent) == IVL_SCT_CLASS)
+		  ? "callf/virt/void" : "callf/void";
+	    fprintf(vvp_out, "    %%%s TD_%s",
+		    callf, vvp_mangle_id(ivl_scope_name(task)));
 	    fprintf(vvp_out, ", S_%p;\n", task);
       } else {
 	    fprintf(vvp_out, "    %%fork TD_%s",
@@ -2819,6 +2822,7 @@ int draw_func_definition(ivl_scope_t scope)
 {
       int rc = 0;
       ivl_statement_t def = ivl_scope_def(scope);
+      ivl_scope_t parent;
 
       fprintf(vvp_out, "TD_%s ;\n", vvp_mangle_id(ivl_scope_name(scope)));
 
@@ -2826,6 +2830,16 @@ int draw_func_definition(ivl_scope_t scope)
       rc += show_statement(def, scope);
 
       fprintf(vvp_out, "    %%end;\n");
+
+	/* Register class methods for virtual dispatch. */
+      parent = ivl_scope_parent(scope);
+      if (parent && ivl_scope_type(parent) == IVL_SCT_CLASS) {
+	    fprintf(vvp_out, ".cmethod \"%s\", \"%s\", TD_%s, S_%p;\n",
+		    ivl_scope_basename(parent),
+		    ivl_scope_basename(scope),
+		    vvp_mangle_id(ivl_scope_name(scope)),
+		    scope);
+      }
 
       thread_count += 1;
       return rc;

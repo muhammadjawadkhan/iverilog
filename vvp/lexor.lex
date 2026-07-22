@@ -81,6 +81,8 @@ inline uint64_t strtouint64(const char*str, char**endptr, int base)
 ^":vpi_time_precision" { return K_vpi_time_precision; }
 ^":file_names" { return K_file_names; }
 
+  /* Left-justified .cmethod must not be taken as a T_LABEL. */
+^\.cmethod { return K_CMETHOD; }
 
   /* A label is any non-blank text that appears left justified. */
 ^[.$_a-zA-Z\\][.$_a-zA-Z\\0-9<>/]* {
@@ -158,6 +160,7 @@ inline uint64_t strtouint64(const char*str, char**endptr, int base)
 ".cast/real"    { return K_CAST_REAL; }
 ".cast/real.s"  { return K_CAST_REAL_S; }
 ".class"        { return K_CLASS; }
+".cmethod"      { return K_CMETHOD; }
 ".cmp/eeq"      { return K_CMP_EEQ; }
 ".cmp/eqx"      { return K_CMP_EQX; }
 ".cmp/eqz"      { return K_CMP_EQZ; }
