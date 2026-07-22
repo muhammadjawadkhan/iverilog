@@ -3729,6 +3729,16 @@ type_declaration
 	pform_set_typedef(@3, name, $2, $4);
 	delete[]$3;
       }
+  /* Explicit class specialization: `typedef box#(byte) byte_box;` */
+  | K_typedef TYPE_IDENTIFIER type_parameter_value identifier_name dimensions_opt ';'
+      { pform_set_type_referenced(@2, $2.text);
+	typeref_t*tmp = new typeref_t($2.type, $3);
+	FILE_NAME(tmp, @2);
+	perm_string name = lex_strings.make($4);
+	pform_set_typedef(@4, name, tmp, $5);
+	delete[]$2.text;
+	delete[]$4;
+      }
 
   /* These are forward declarations... */
 
