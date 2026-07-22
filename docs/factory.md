@@ -1,41 +1,37 @@
 # Factory (Tier B #1)
 
-Status: **partial** — name-based register / find / type-override / create on the seeded IVL_UVM layer. Creation uses virtual `create_object`.
+Status: **partial** — name-based register / find / type-override / create, plus Accellera-shaped `uvm_object_registry#(T,Tname)`.
 
 Track: **muhammadjawadkhan/iverilog-uvm** only. Do not open PRs to `steveicarus/iverilog` for this work.
 
 ## What works
 
 ```systemverilog
-class pkt_wrapper extends uvm_object_wrapper;
-  function new(); super.new("pkt"); endfunction
-  virtual function uvm_object create_object(string name="");
-    pkt o = new(name); return o;
-  endfunction
+class pkt extends uvm_object;
+  `ivl_uvm_object_utils(pkt)  // typedef type_id = uvm_object_registry#(pkt,"pkt")
 endclass
 
-f = uvm_get_factory();
-f.register(w_pkt);
-f.set_type_override_by_name("pkt", "pkt_ext");
-obj = f.create_object_by_name("pkt", "", "p0"); // virtual create_object
+typedef uvm_object_registry#(pkt, "pkt") pkt_type_id;
+pkt_type_id w_pkt = new;   // auto-registers with factory
+obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 ```
 
 | API | Notes |
 |-----|--------|
 | `uvm_object_wrapper` | `type_name` property; virtual `create_object` / `create_component` |
+| `uvm_object_registry#(T,Tname)` | Extends wrapper; `new` auto-registers; virtual `create_object` news `T` |
 | `uvm_factory::register` | Name-keyed type table (fixed size, default 64) |
 | `find_by_name` | Lookup registered wrapper |
 | `set_type_override_by_name` | Requested → override type name |
 | `resolve_type_name` | Follow override chain |
 | `create_object_by_name` | Resolve + virtual `w.create_object(name)` |
 | `uvm_get_factory()` | Package singleton (`factory` handle) |
-| `` `ivl_uvm_object_utils(T) `` | `get_type_name` + `create` without `uvm_object_registry#(T)` |
+| `` `ivl_uvm_object_utils(T) `` | Nested `type_id` typedef + `get_type_name` / `create` |
 
 ## Gaps
 
-- Explicit specializations `C#(T)` MVP landed (see [param-classes.md](param-classes.md)); Accellera `uvm_*#(T)` registries still ahead
-- Unqualified calls to inherited methods work; self-call of an override needs `super`
-- `uvm_object_registry#(T)` / `` `uvm_object_utils `` (needs `C#(T)` specialization)
+- No static `type_id::get()` / `TYPE::type_id` scope resolution yet (use module-level `typedef` of the registry)
+- Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
 
 ## Example
