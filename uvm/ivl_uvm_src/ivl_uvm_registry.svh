@@ -1,7 +1,7 @@
 // Accellera-shaped uvm_object_registry#(T, Tname) for IVL_UVM.
 //
-// Static class members are not supported yet, so type_id::get() is omitted.
-// Constructing a registry instance auto-registers with uvm_get_factory().
+// type_id::get() returns a singleton wrapper (stored as uvm_object_wrapper
+// because self-typed static properties of param classes are not parsed yet).
 `ifndef IVL_UVM_REGISTRY_SVH
 `define IVL_UVM_REGISTRY_SVH
 
@@ -23,11 +23,20 @@ class uvm_object_registry #(type T = ivl_uvm_registry_dummy,
                             parameter string Tname = "<unknown>")
   extends uvm_object_wrapper;
 
+  static uvm_object_wrapper m_inst;
+
   function new();
     uvm_factory f;
     super.new(Tname);
     f = uvm_get_factory();
     f.register(this);
+  endfunction
+
+  // Accellera-shaped singleton. Call as TYPE::type_id::get().
+  static function uvm_object_wrapper get();
+    if (m_inst == null)
+      m_inst = new;
+    return m_inst;
   endfunction
 
   virtual function uvm_object create_object(string name = "");

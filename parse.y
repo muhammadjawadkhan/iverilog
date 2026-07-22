@@ -4994,6 +4994,14 @@ expr_primary
 	delete $4;
 	$$ = tmp;
       }
+  /* Class-scoped static call: Class::method() / TYPE::type_id::get() */
+  | class_scope hierarchy_identifier { lex_in_class_scope(0); } argument_list_parens
+      { PECallFunction*tmp = new PECallFunction($1, *$2, *$4);
+	FILE_NAME(tmp, @2);
+	delete $2;
+	delete $4;
+	$$ = tmp;
+      }
   | K_this
       { PEIdent*tmp = new PEIdent(perm_string::literal(THIS_TOKEN), UINT_MAX);
 	FILE_NAME(tmp,@1);

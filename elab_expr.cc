@@ -2199,6 +2199,7 @@ unsigned PECallFunction::test_width(Design*des, NetScope*scope,
                                     width_mode_t&mode)
 {
       if (chain_prefix_) return test_width_chain_(des, scope, mode);
+      if (class_type_) return test_width_class_scope_(des, scope, mode);
 
       if (debug_elaborate) {
 	    cerr << get_fileline() << ": PECallFunction::test_width: "
@@ -3532,6 +3533,7 @@ NetExpr* PECallFunction::elaborate_expr_(Design*des, NetScope*scope,
       flags &= ~SYS_TASK_ARG; // don't propagate the SYS_TASK_ARG flag
 
       if (chain_prefix_) return elaborate_expr_chain_(des, scope, flags);
+      if (class_type_) return elaborate_expr_class_scope_(des, scope, flags);
 
       // Search for the symbol. This should turn up a scope.
       symbol_search_results search_results;
@@ -4054,6 +4056,73 @@ NetExpr* PECallFunction::elaborate_class_method_net_this_(Design*des, NetScope*s
       call->set_line(*this);
       call->set_no_virt(no_virt);
       return call;
+}
+
+/*
+ * Class::method(...) — elaborate as a method call with a null `this`.
+ * Works for methods that only touch static properties (Accellera type_id::get).
+ */
+NetExpr* PECallFunction::elaborate_expr_class_scope_(Design*des, NetScope*scope,
+						      unsigned flags) const
+{
+      ivl_assert(*this, class_type_);
+      (void)flags;
+
+      ivl_type_t use_type = class_type_->elaborate_type(des, scope);
+      const netclass_t*cls = dynamic_cast<const netclass_t*>(use_type);
+      if (cls == 0) {
+	    cerr << get_fileline() << ": error: "
+		 << "Class scope before `::' does not name a class type."
+		 << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      if (path_.size() != 1) {
+	    cerr << get_fileline() << ": sorry: "
+		 << "Only Class::method(...) is supported (got `"
+		 << path_ << "')." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      perm_string method_name = peek_tail_name(path_);
+      NetENull*null_this = new NetENull;
+      null_this->set_line(*this);
+      return elaborate_class_method_net_this_(des, scope, null_this, cls,
+						method_name, &parms_, true);
+}
+
+unsigned PECallFunction::test_width_class_scope_(Design*des, NetScope*scope,
+						  width_mode_t&mode)
+{
+      ivl_assert(*this, class_type_);
+      (void)mode;
+
+      ivl_type_t use_type = class_type_->elaborate_type(des, scope);
+      const netclass_t*cls = dynamic_cast<const netclass_t*>(use_type);
+      if (cls == 0 || path_.size() != 1) {
+	    expr_width_ = 0;
+	    return 0;
+      }
+
+      perm_string method_name = peek_tail_name(path_);
+      NetScope*method = cls->method_from_name(method_name);
+      if (method == 0 || method->type() != NetScope::FUNC) {
+	    expr_width_ = 0;
+	    return 0;
+      }
+
+      NetNet*res = method->find_signal(method->basename());
+      if (res == 0) {
+	    expr_width_ = 0;
+	    return 0;
+      }
+
+      expr_type_ = res->data_type();
+      signed_flag_ = res->get_signed();
+      expr_width_ = res->vector_width();
+      return expr_width_;
 }
 
 NetExpr* PECallFunction::elaborate_expr_chain_(Design*des, NetScope*scope,

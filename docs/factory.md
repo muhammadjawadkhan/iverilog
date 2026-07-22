@@ -11,14 +11,15 @@ class pkt extends uvm_object;
   `ivl_uvm_object_utils(pkt)  // typedef type_id = uvm_object_registry#(pkt,"pkt")
 endclass
 
-pkt::type_id w_pkt = new;   // auto-registers with factory
+ok = $cast(w_pkt, pkt::type_id::get());  // singleton auto-registers
 obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 ```
 
 | API | Notes |
 |-----|--------|
 | `uvm_object_wrapper` | `type_name` property; virtual `create_object` / `create_component` |
-| `uvm_object_registry#(T,Tname)` | Extends wrapper; `new` auto-registers; virtual `create_object` news `T` |
+| `uvm_object_registry#(T,Tname)` | Extends wrapper; `new` / `get()` auto-registers; virtual `create_object` news `T` |
+| `TYPE::type_id::get()` | Class-scoped static call; returns singleton `uvm_object_wrapper` |
 | `uvm_factory::register` | Name-keyed type table (fixed size, default 64) |
 | `find_by_name` | Lookup registered wrapper |
 | `set_type_override_by_name` | Requested → override type name |
@@ -30,7 +31,9 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 
 ## Gaps
 
-- No static `type_id::get()` yet (construct `TYPE::type_id id = new;` to register)
+- `get()` returns `uvm_object_wrapper` (not the specialized registry); `$cast` to `TYPE::type_id` for typed `create`
+- No static `type_id::create()` yet (name clash with instance `create`)
+- Self-typed static properties of param classes not parsed (`static R#(T) me`)
 - Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
 

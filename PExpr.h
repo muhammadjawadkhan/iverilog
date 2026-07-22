@@ -943,6 +943,10 @@ class PECallFunction : public PExpr {
 	// Used to convert a user function called as a task
       explicit PECallFunction(PPackage *pkg, const pform_name_t &n, const std::vector<named_pexpr_t> &parms);
 
+	// Class-scoped static call: Class::method(...) / TYPE::type_id::get()
+      explicit PECallFunction(data_type_t* cls, const pform_name_t &n, const std::list<named_pexpr_t> &parms);
+      explicit PECallFunction(data_type_t* cls, const pform_name_t &n, const std::vector<named_pexpr_t> &parms);
+
 	// Call of system function (name is not hierarchical)
       explicit PECallFunction(perm_string n, const std::vector<named_pexpr_t> &parms);
       explicit PECallFunction(perm_string n);
@@ -991,6 +995,8 @@ class PECallFunction : public PExpr {
       std::vector<named_pexpr_t> parms_;
 	// If non-null, this call is prefix().tail_name(...) (SV method chain).
       PExpr* chain_prefix_ = nullptr;
+	// If non-null, Class::method(...) — static/class-scoped call.
+      data_type_t* class_type_ = nullptr;
       PExpr* with_expr_ = nullptr;
       std::vector<PExpr*> constraint_exprs_;
 
@@ -1047,6 +1053,11 @@ class PECallFunction : public PExpr {
 
       NetExpr* elaborate_expr_method_chained_(Design*des, NetScope*scope,
 					     symbol_search_results&search_results) const;
+
+      NetExpr* elaborate_expr_class_scope_(Design*des, NetScope*scope,
+					  unsigned flags) const;
+      unsigned test_width_class_scope_(Design*des, NetScope*scope,
+					width_mode_t&mode);
 
       NetExpr* elaborate_expr_chain_(Design*des, NetScope*scope, unsigned flags) const;
 

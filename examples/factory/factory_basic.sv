@@ -1,4 +1,4 @@
-// Tier B #1 smoke: uvm_object_registry#(T) auto-register + create / override.
+// Tier B #1 smoke: TYPE::type_id::get() + factory create / override.
 `timescale 1ns/1ps
 
 module factory_basic;
@@ -21,7 +21,6 @@ module factory_basic;
     `ivl_uvm_object_utils(pkt_ext)
   endclass
 
-  // Nested `TYPE::type_id` from `ivl_uvm_object_utils` (Accellera shape).
   pkt::type_id       w_pkt;
   pkt_ext::type_id   w_ext;
   uvm_factory        f;
@@ -36,9 +35,17 @@ module factory_basic;
   initial begin
     pass = 1;
 
-    // Construction auto-registers with the factory.
-    w_pkt = new;
-    w_ext = new;
+    // Accellera-shaped singleton registration via type_id::get().
+    ok = $cast(w_pkt, pkt::type_id::get());
+    if (!ok || w_pkt == null) begin
+      $display("FAIL: pkt::type_id::get");
+      pass = 0;
+    end
+    ok = $cast(w_ext, pkt_ext::type_id::get());
+    if (!ok || w_ext == null) begin
+      $display("FAIL: pkt_ext::type_id::get");
+      pass = 0;
+    end
     f = uvm_get_factory();
 
     obj = f.create_object_by_name("pkt", "", "p0");

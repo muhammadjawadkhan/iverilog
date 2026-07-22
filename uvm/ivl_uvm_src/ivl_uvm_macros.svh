@@ -65,7 +65,7 @@
   `endif // IVL_UVM_MBX_T
 
   // Accellera-shaped utils: typedef type_id = uvm_object_registry#(TYPE,"TYPE").
-  // Construct `TYPE::type_id id = new;` to auto-register with the factory.
+  // Register with `TYPE::type_id::get()` (or construct `TYPE::type_id id = new`).
   `define ivl_uvm_object_utils(TYPE) \
     typedef uvm_object_registry#(TYPE, `"TYPE`") type_id; \
     virtual function string get_type_name(); \
