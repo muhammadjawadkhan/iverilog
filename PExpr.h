@@ -1042,7 +1042,8 @@ class PECallFunction : public PExpr {
 						NetExpr* this_expr,
 						const netclass_t*class_type,
 						perm_string method_name,
-						const std::vector<named_pexpr_t>*src_parms) const;
+						const std::vector<named_pexpr_t>*src_parms,
+						bool no_virt = false) const;
 
       NetExpr* elaborate_expr_method_chained_(Design*des, NetScope*scope,
 					     symbol_search_results&search_results) const;

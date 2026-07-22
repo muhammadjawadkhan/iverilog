@@ -121,7 +121,8 @@ static void draw_ufunc_preamble(ivl_expr_t expr)
 {
       ivl_scope_t def = ivl_expr_def(expr);
       unsigned idx;
-      int virt = is_class_method(def);
+	/* super.method binds statically — never use virtual dispatch. */
+      int virt = is_class_method(def) && ! ivl_expr_ufunc_no_virt(expr);
       const char*callf = virt ? "callf/virt" : "callf";
 
         /* If this is an automatic function, allocate the local storage. */

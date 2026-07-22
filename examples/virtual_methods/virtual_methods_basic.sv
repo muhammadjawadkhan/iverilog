@@ -1,4 +1,4 @@
-// Tier B / compiler: virtual method dispatch through class handles.
+// Tier B / compiler: virtual method dispatch + super.method static bind.
 `timescale 1ns/1ps
 
 class base;
@@ -12,6 +12,12 @@ class base;
   virtual function int getx();
     return x;
   endfunction
+  virtual function void build();
+    x = 1;
+  endfunction
+  virtual task bump();
+    x = x + 100;
+  endtask
 endclass
 
 class der extends base;
@@ -24,6 +30,14 @@ class der extends base;
   virtual function int getx();
     return x;
   endfunction
+  virtual function void build();
+    super.build();
+    x = x + 10;
+  endfunction
+  virtual task bump();
+    super.bump();
+    x = x + 1;
+  endtask
 endclass
 
 module virtual_methods_basic;
@@ -48,6 +62,14 @@ module virtual_methods_basic;
     n = b.getx();
     if (n !== 15) begin
       $display("FAIL: getx got %0d (expect 15)", n);
+      pass = 0;
+    end
+
+    // super.* is statically bound (no virt recursion).
+    b.build();
+    b.bump();
+    if (d.x !== 112) begin
+      $display("FAIL: super chain got %0d (expect 112)", d.x);
       pass = 0;
     end
 

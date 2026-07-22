@@ -3999,15 +3999,24 @@ NetExpr* PECallFunction::elaborate_class_method_net_(Design*des, NetScope*scope,
 {
       NetESignal*ethis = new NetESignal(net);
       ethis->set_line(*this);
+      bool super_call = false;
+      for (pform_name_t::const_iterator it = path_.name.begin()
+		 ; it != path_.name.end() ; ++it) {
+	    if (it->name == perm_string::literal(SUPER_TOKEN)) {
+		  super_call = true;
+		  break;
+	    }
+      }
       return elaborate_class_method_net_this_(des, scope, ethis, class_type,
-						method_name, src_parms);
+						method_name, src_parms, super_call);
 }
 
 NetExpr* PECallFunction::elaborate_class_method_net_this_(Design*des, NetScope*scope,
 							  NetExpr* this_expr,
 							  const netclass_t*class_type,
 							  perm_string method_name,
-							  const vector<named_pexpr_t>*src_parms) const
+							  const vector<named_pexpr_t>*src_parms,
+							  bool no_virt) const
 {
       NetScope*method = class_type->method_from_name(method_name);
 
@@ -4043,6 +4052,7 @@ NetExpr* PECallFunction::elaborate_class_method_net_this_(Design*des, NetScope*s
       NetESignal*eres = new NetESignal(res);
       NetEUFunc*call = new NetEUFunc(scope, method, eres, parms, false);
       call->set_line(*this);
+      call->set_no_virt(no_virt);
       return call;
 }
 

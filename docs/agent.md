@@ -10,10 +10,8 @@ Track: **muhammadjawadkhan/iverilog-uvm** only.
 ```systemverilog
 class my_agent extends uvm_agent;
   virtual function void build_phase(uvm_phase phase);
-    // Do not call super.build_phase — virt would recurse.
-    monitor = new("monitor", this);
-    sequencer = new("sequencer", this);
-    driver = new("driver", this);
+    super.build_phase(phase); // static bind — safe
+    // replace/extend driver as needed
   endfunction
 endclass
 
@@ -30,8 +28,6 @@ seq.start(env.agent.sequencer); // nested property read
 ## Gaps
 
 - No parameterized agent/monitor
-- Calling `super.build_phase` / `super.connect_phase` on virtual overrides
-  recurses (use local body only)
 - No multi-agent / virtual sequencer
 - Analysis fan-out is on the port (see [driver.md](driver.md)), not a
   separate export/imp hierarchy

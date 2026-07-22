@@ -261,7 +261,8 @@ class PCallTask  : public Statement {
       NetProc *elaborate_non_void_function_(Design *des, NetScope *scope) const;
 
       NetProc*elaborate_build_call_(Design*des, NetScope*scope,
-				    NetScope*task, NetExpr*use_this) const;
+				    NetScope*task, NetExpr*use_this,
+				    bool no_virt = false) const;
       NetProc*elaborate_sys_task_method_(Design*des, NetScope*scope,
 					 NetNet*net,
 					 perm_string method_name,

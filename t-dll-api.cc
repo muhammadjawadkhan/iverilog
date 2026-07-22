@@ -438,6 +438,13 @@ extern "C" ivl_scope_t ivl_expr_def(ivl_expr_t net)
       return 0;
 }
 
+extern "C" int ivl_expr_ufunc_no_virt(ivl_expr_t net)
+{
+      assert(net);
+      assert(net->type_ == IVL_EX_UFUNC);
+      return net->u_.ufunc_.no_virt ? 1 : 0;
+}
+
 extern "C" uint64_t ivl_expr_delay_val(ivl_expr_t net)
 {
       assert(net);
@@ -2737,6 +2744,13 @@ extern "C" ivl_scope_t ivl_stmt_call(ivl_statement_t net)
 	    assert(0);
 	    return 0;
       }
+}
+
+extern "C" int ivl_stmt_utask_no_virt(ivl_statement_t net)
+{
+      assert(net);
+      assert(net->type_ == IVL_ST_UTASK);
+      return net->u_.utask_.no_virt ? 1 : 0;
 }
 
 extern "C" bool ivl_stmt_flow_control(ivl_statement_t net)

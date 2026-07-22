@@ -300,6 +300,7 @@ NetEUFunc* NetEUFunc::dup_expr() const
 
       ivl_assert(*this, tmp);
       tmp->set_line(*this);
+      tmp->set_no_virt(no_virt_);
       return tmp;
 }
 

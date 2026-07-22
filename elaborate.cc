@@ -4815,7 +4815,16 @@ NetProc* PCallTask::elaborate_method_(Design*des, NetScope*scope,
 	    NetESignal*use_this = new NetESignal(net);
 	    use_this->set_line(*this);
 
-	    return elaborate_build_call_(des, scope, task, use_this);
+	    bool super_call = false;
+	    for (pform_name_t::const_iterator it = path_.begin()
+		       ; it != path_.end() ; ++it) {
+		  if (it->name == perm_string::literal(SUPER_TOKEN)) {
+			super_call = true;
+			break;
+		  }
+	    }
+
+	    return elaborate_build_call_(des, scope, task, use_this, super_call);
       }
 
       return 0;
@@ -4903,7 +4912,8 @@ NetProc* PCallTask::elaborate_void_function_(Design*des, NetScope*scope,
 }
 
 NetProc* PCallTask::elaborate_build_call_(Design*des, NetScope*scope,
-					  NetScope*task, NetExpr*use_this) const
+					  NetScope*task, NetExpr*use_this,
+					  bool no_virt) const
 {
       const NetBaseDef*def = 0;
       if (task->type() == NetScope::TASK) {
@@ -5053,6 +5063,7 @@ NetProc* PCallTask::elaborate_build_call_(Design*des, NetScope*scope,
 	/* Generate the task call proper... */
       NetUTask*cur = new NetUTask(task);
       cur->set_line(*this);
+      cur->set_no_virt(no_virt);
       block->append(cur);
 
 	/* Generate assignment statements for the output and INOUT

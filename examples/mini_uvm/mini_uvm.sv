@@ -133,8 +133,7 @@ module mini_uvm;
     endfunction
     virtual function void build_phase(uvm_phase phase);
       my_driver drv;
-      monitor = new("monitor", this);
-      sequencer = new("sequencer", this);
+      super.build_phase(phase);
       drv = new("driver", this);
       driver = drv;
       drv.mon = monitor;

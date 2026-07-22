@@ -1593,13 +1593,18 @@ static int show_stmt_utask(ivl_statement_t net)
       ivl_scope_t task = ivl_stmt_call(net);
       ivl_scope_t parent;
       int class_method = 0;
+      int super_static = 0;
+      const char*name;
 
       show_stmt_file_line(net, "User task call.");
 
       parent = ivl_scope_parent(task);
-      if (parent && ivl_scope_type(parent) == IVL_SCT_CLASS) {
-	    const char*name = ivl_scope_basename(task);
-	    if (! (name && strcmp(name, "new") == 0))
+      name = ivl_scope_basename(task);
+      if (parent && ivl_scope_type(parent) == IVL_SCT_CLASS
+	  && ! (name && strcmp(name, "new") == 0)) {
+	    if (ivl_stmt_utask_no_virt(net))
+		  super_static = 1;
+	    else
 		  class_method = 1;
       }
 
@@ -1612,6 +1617,12 @@ static int show_stmt_utask(ivl_statement_t net)
 	    fprintf(vvp_out, ", S_%p;\n", task);
       } else if (class_method) {
 	    fprintf(vvp_out, "    %%callt/virt TD_%s",
+		    vvp_mangle_id(ivl_scope_name(task)));
+	    fprintf(vvp_out, ", S_%p;\n", task);
+      } else if (super_static) {
+	      /* super.task: static bind with shared automatic context
+		 (same path as void function calls — not %fork/%join). */
+	    fprintf(vvp_out, "    %%callf/void TD_%s",
 		    vvp_mangle_id(ivl_scope_name(task)));
 	    fprintf(vvp_out, ", S_%p;\n", task);
       } else {

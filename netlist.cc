@@ -2179,7 +2179,8 @@ const NetExpr* NetSTask::parm(unsigned idx) const
 
 NetEUFunc::NetEUFunc(NetScope*scope, NetScope*def, NetESignal*res,
                      vector<NetExpr*>&p, bool nc)
-: NetExpr(res->net_type()), scope_(scope), func_(def), result_sig_(res), parms_(p), need_const_(nc)
+: NetExpr(res->net_type()), scope_(scope), func_(def), result_sig_(res), parms_(p),
+  need_const_(nc), no_virt_(false)
 {
 }
 
@@ -2216,7 +2217,7 @@ const NetScope* NetEUFunc::func() const
 }
 
 NetUTask::NetUTask(NetScope*def)
-: task_(def)
+: task_(def), no_virt_(false)
 {
 }
 

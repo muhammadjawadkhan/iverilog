@@ -120,9 +120,9 @@ class uvm_agent extends uvm_component;
     is_active = 1;
   endfunction
 
-  // Note: do not call super.build_phase / super.connect_phase — virtual
-  // dispatch through the same handle recurses (no non-virt super yet).
+  // super.build_phase / super.connect_phase are statically bound (no virt).
   virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
     monitor = new("monitor", this);
     if (is_active) begin
       sequencer = new("sequencer", this);
@@ -131,6 +131,7 @@ class uvm_agent extends uvm_component;
   endfunction
 
   virtual function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
     if (is_active && driver != null && sequencer != null)
       driver.set_sequencer(sequencer);
   endfunction

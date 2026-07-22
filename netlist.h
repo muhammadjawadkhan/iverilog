@@ -4055,6 +4055,10 @@ class NetEUFunc  : public NetExpr {
 
       const NetScope* func() const;
 
+	/* Super.method must not use virtual dispatch. */
+      void set_no_virt(bool flag) { no_virt_ = flag; }
+      bool no_virt() const { return no_virt_; }
+
       virtual void dump(std::ostream&) const override;
 
       virtual void expr_scan(struct expr_scan_t*) const override;
@@ -4073,6 +4077,7 @@ class NetEUFunc  : public NetExpr {
       NetESignal*result_sig_;
       std::vector<NetExpr*> parms_;
       bool need_const_;
+      bool no_virt_;
 
     private: // not implemented
       NetEUFunc(const NetEUFunc&);
@@ -4119,6 +4124,10 @@ class NetUTask  : public NetProc {
 
       const NetScope* task() const;
 
+	/* Super.method must not use virtual dispatch. */
+      void set_no_virt(bool flag) { no_virt_ = flag; }
+      bool no_virt() const { return no_virt_; }
+
       virtual NexusSet* nex_input(bool rem_out = true, bool always_sens = false,
                                   bool nested_func = false) const override;
       virtual void nex_output(NexusSet&) override;
@@ -4129,6 +4138,7 @@ class NetUTask  : public NetProc {
 
     private:
       NetScope*task_;
+      bool no_virt_;
 };
 
 /*

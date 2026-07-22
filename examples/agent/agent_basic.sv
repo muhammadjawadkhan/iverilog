@@ -57,11 +57,9 @@ module agent_basic;
     function new(string name = "my_agent", uvm_component parent = null);
       super.new(name, parent);
     endfunction
-    // Do not call super.build_phase — virtual dispatch would recurse.
     virtual function void build_phase(uvm_phase phase);
       my_driver drv;
-      monitor = new("monitor", this);
-      sequencer = new("sequencer", this);
+      super.build_phase(phase);
       drv = new("driver", this);
       driver = drv;
       drv.mon = monitor;

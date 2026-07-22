@@ -675,6 +675,7 @@ void dll_target::expr_ufunc(const NetEUFunc*net)
       }
       ivl_assert(*net, expr->u_.ufunc_.def);
       ivl_assert(*net, expr->u_.ufunc_.def->type_ == IVL_SCT_FUNCTION);
+      expr->u_.ufunc_.no_virt = net->no_virt() ? 1 : 0;
 
       unsigned cnt = net->parm_count();
       expr->u_.ufunc_.parms = cnt;
