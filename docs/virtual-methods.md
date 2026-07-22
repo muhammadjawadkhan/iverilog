@@ -37,8 +37,9 @@ b.body();              // runs der::body → base::body
 
 - Non-virtual vs virtual is not distinguished yet for ordinary calls through
   handles — class method calls use runtime lookup (fine when there is no override).
-- Does not fix “derived body cannot call inherited method by unqualified name”
-  (must use `super.method` or a base-typed handle).
+- Does not fix self-call of an override without `super` (e.g. `build()` inside
+  `build()` recurses via virt — use `super.build()`).
+- Unqualified calls to *inherited* methods from a derived body work.
 - Suspending virt calls that switch scopes mid-join are not hardened.
 
 ## Example

@@ -11,7 +11,7 @@ class C #(type T = int, parameter int W = 8);
   // ...
 endclass
 
-C#(byte) c;   // explicit specialization — not done yet
+C#(byte) c;   // explicit specialization
 ```
 
 ## What landed (ANSI parameter ports + defaults)
@@ -32,20 +32,26 @@ C#(byte) c;   // explicit specialization — not done yet
 
 With defaults present, a bare instance like `box b;` elaborates using those defaults.
 
-### Smoke example
+### Explicit specialization `C#(T)` (MVP)
 
-[`examples/param_classes/box_default.sv`](../examples/param_classes/box_default.sv) — `class box #(type T = int, parameter int W = 8);` constructed and used without an explicit `#()` override. Companion regression: `plain_class.sv`.
+- Parse keeps `#(...)` on `typeref_t` (`box#(byte) b`).
+- Elaboration lazily clones the class scope, force-overrides parameter ports (class params are otherwise non-overridable), evaluates, and elaborates methods.
+- Ordered and named overrides are accepted; identity is cached by a mangled type name.
+- Built-in `mailbox` / `semaphore` still ignore `#()`.
+
+Smoke: [`examples/param_classes/box_special.sv`](../examples/param_classes/box_special.sv) — expects `$bits(b.val)==8`.
 
 ```bash
-iverilog -g2012 -o box_default.vvp examples/param_classes/box_default.sv && vvp box_default.vvp
-# expect: PASS box_default ...
+make -C examples/param_classes run
+# expect: PASS box_default ... / PASS box_special ... / PASS plain_class ...
 ```
 
 ## TODO
 
-- [ ] Explicit specialization / overrides: `C#(byte)`, `C#(byte, 16)`, named overrides — parse, elaborate a specialized class type, and wire instances to it.
+- [ ] `typedef C#(byte) t;` and richer multi-param identity edge cases.
 - [ ] Inheritance + parameters interactions as needed by UVM base classes.
 - [ ] Broader ivtest coverage beyond the local smoke examples.
+- [ ] Accellera-shaped `uvm_*#(T)` registries (needs this path + more).
 
 ## Status pointer
 

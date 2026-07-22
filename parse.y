@@ -1791,26 +1791,12 @@ data_declaration /* IEEE1800-2005: A.2.1.3 */
 		       $1, $2);
 	var_lifetime = LexicalScope::INHERITED;
       }
-  /* Built-in / parameterized class types: `mailbox #(int) mb = new();` */
+  /* Built-in / parameterized class types: `mailbox #(int) mb = new();`
+     or user class specialization `box#(byte) b;`. */
   | attribute_list_opt K_const_opt variable_lifetime_opt TYPE_IDENTIFIER type_parameter_value list_of_variable_decl_assignments ';'
-      { typeref_t*tmp = new typeref_t($4.type);
+      { typeref_t*tmp = new typeref_t($4.type, $5);
 	FILE_NAME(tmp, @4);
 	pform_make_var(@4, $6, tmp, $1, $2);
-	if ($5) {
-	      if ($5->by_order) {
-		    for (std::list<PExpr*>::iterator i = $5->by_order->begin()
-			       ; i != $5->by_order->end() ; ++i)
-			  delete *i;
-		    delete $5->by_order;
-	      }
-	      if ($5->by_name) {
-		    for (std::list<named_pexpr_t>::iterator i = $5->by_name->begin()
-			       ; i != $5->by_name->end() ; ++i)
-			  delete i->parm;
-		    delete $5->by_name;
-	      }
-	      delete $5;
-	}
 	delete[]$4.text;
 	var_lifetime = LexicalScope::INHERITED;
       }
@@ -2567,27 +2553,12 @@ type_identifier_variable_decl_assignments_with_type
 	$$.decl_assignments = $3;
 	$$.type = pform_make_parray_type(@2, tmp, $2);
       }
-  /* Built-in parameterized classes: `mailbox #(int) mb = new();` */
+  /* Built-in / user parameterized classes: `mailbox #(int) mb` / `box#(byte) b` */
   | TYPE_IDENTIFIER type_parameter_value list_of_variable_decl_assignments
       { pform_set_type_referenced(@1, $1.text);
-	auto tmp = new typeref_t($1.type);
+	auto tmp = new typeref_t($1.type, $2);
 	FILE_NAME(tmp, @1);
 	delete[]$1.text;
-	if ($2) {
-	      if ($2->by_order) {
-		    for (std::list<PExpr*>::iterator i = $2->by_order->begin()
-			       ; i != $2->by_order->end() ; ++i)
-			  delete *i;
-		    delete $2->by_order;
-	      }
-	      if ($2->by_name) {
-		    for (std::list<named_pexpr_t>::iterator i = $2->by_name->begin()
-			       ; i != $2->by_name->end() ; ++i)
-			  delete i->parm;
-		    delete $2->by_name;
-	      }
-	      delete $2;
-	}
 	$$.decl_assignments = $3;
 	$$.type = tmp;
       }

@@ -393,6 +393,23 @@ void NetScope::replace_parameter(Design *des, perm_string key, PExpr*val,
       ref.val_scope = scope;
 }
 
+bool NetScope::force_parameter_override(perm_string key, PExpr*val,
+					NetScope*val_scope)
+{
+      if (parameters.find(key) == parameters.end())
+	    return false;
+
+      param_expr_t&ref = parameters[key];
+      if (ref.local_flag)
+	    return false;
+
+      ref.val_expr = val;
+      ref.val_scope = val_scope ? val_scope : this;
+      ref.val = 0;
+      ref.ivl_type = 0;
+      return true;
+}
+
 bool NetScope::make_parameter_unannotatable(perm_string key)
 {
       bool flag = false;

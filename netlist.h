@@ -1035,6 +1035,13 @@ class NetScope : public Definitions, public Attrib {
       void replace_parameter(Design *des, perm_string name, PExpr*val,
 			     NetScope*scope, bool defparam = false);
 
+	/* Force an override even when the parameter is marked
+	   non-overridable (class parameter ports). Used for C#(T)
+	   specialization. Resets any prior evaluation. Returns false
+	   if the name is missing or is a localparam. */
+      bool force_parameter_override(perm_string name, PExpr*val,
+				    NetScope*val_scope);
+
 	/* This is used to ensure the value of a parameter cannot be
 	   changed at run-time. This is required if a specparam is used
 	   in an expression that must be evaluated at compile-time.

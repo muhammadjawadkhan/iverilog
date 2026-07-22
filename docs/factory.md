@@ -33,8 +33,8 @@ obj = f.create_object_by_name("pkt", "", "p0"); // virtual create_object
 
 ## Gaps
 
-- Derived-class methods cannot call inherited methods by unqualified name
-- Class properties cannot hold string fixed-arrays or associative arrays → factory tables are package-level
+- Explicit specializations `C#(T)` MVP landed (see [param-classes.md](param-classes.md)); Accellera `uvm_*#(T)` registries still ahead
+- Unqualified calls to inherited methods work; self-call of an override needs `super`
 - `uvm_object_registry#(T)` / `` `uvm_object_utils `` (needs `C#(T)` specialization)
 - Instance overrides; full coreservice
 

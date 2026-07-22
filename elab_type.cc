@@ -19,9 +19,11 @@
 
 # include  "PExpr.h"
 # include  "PScope.h"
+# include  "PClass.h"
 # include  "PWire.h"
 # include  "Module.h"
 # include  "parse_api.h"
+# include  "pform.h"
 # include  "pform_types.h"
 # include  "netlist.h"
 # include  "netclass.h"
@@ -35,10 +37,16 @@
 # include  "netstruct.h"
 # include  "netvector.h"
 # include  "netmisc.h"
+# include  "compiler.h"
 # include  <typeinfo>
+# include  <algorithm>
+# include  <sstream>
+# include  <cctype>
 # include  "ivl_assert.h"
 
 using namespace std;
+
+extern void set_scope_timescale(Design*des, NetScope*scope, const PScope*pscope);
 
 static netclass_t* make_builtin_semaphore_type_()
 {
@@ -54,6 +62,207 @@ static netclass_t* make_builtin_mailbox_type_()
       if (!builtin_mailbox_type)
 	    builtin_mailbox_type = new netclass_t(perm_string::literal("mailbox"), 0);
       return builtin_mailbox_type;
+}
+
+/*
+ * Build a stable, identifier-safe key for a class specialization so
+ * repeated `C#(byte)` references share one netclass_t.
+ */
+static string sanitize_spec_token_(const string&in)
+{
+      string out;
+      out.reserve(in.size());
+      for (size_t i = 0 ; i < in.size() ; i += 1) {
+	    unsigned char ch = in[i];
+	    if (isalnum(ch) || ch == '_' || ch == '$')
+		  out.push_back(ch);
+	    else
+		  out.push_back('_');
+      }
+      return out;
+}
+
+static string specialization_key_(perm_string base, const parmvalue_t*ov)
+{
+      ostringstream os;
+      os << base << "$spec";
+      if (ov->by_order) {
+	    for (list<PExpr*>::const_iterator it = ov->by_order->begin()
+		       ; it != ov->by_order->end() ; ++ it) {
+		  os << "$";
+		  if (*it == 0) {
+			os << "_";
+			continue;
+		  }
+		  ostringstream one;
+		  (*it)->dump(one);
+		  os << sanitize_spec_token_(one.str());
+	    }
+      } else if (ov->by_name) {
+	    for (list<named_pexpr_t>::const_iterator it = ov->by_name->begin()
+		       ; it != ov->by_name->end() ; ++ it) {
+		  os << "$" << it->name << "=";
+		  if (it->parm == 0) {
+			os << "_";
+			continue;
+		  }
+		  ostringstream one;
+		  it->parm->dump(one);
+		  os << sanitize_spec_token_(one.str());
+	    }
+      }
+      return os.str();
+}
+
+static vector<perm_string> class_param_names_in_order_(
+      const map<perm_string,LexicalScope::param_expr_t*>&parameters)
+{
+      vector<pair<unsigned,perm_string> > tmp;
+      tmp.reserve(parameters.size());
+      for (map<perm_string,LexicalScope::param_expr_t*>::const_iterator it = parameters.begin()
+		 ; it != parameters.end() ; ++ it)
+	    tmp.push_back(make_pair(it->second->lexical_pos, it->first));
+      sort(tmp.begin(), tmp.end());
+      vector<perm_string> names;
+      names.reserve(tmp.size());
+      for (size_t i = 0 ; i < tmp.size() ; i += 1)
+	    names.push_back(tmp[i].second);
+      return names;
+}
+
+static void apply_class_param_overrides_(Design*des, NetScope*class_scope,
+					 NetScope*val_scope, PClass*pclass,
+					 const parmvalue_t*ov, const LineInfo&li)
+{
+      vector<perm_string> order = class_param_names_in_order_(pclass->parameters);
+
+      if (ov->by_order) {
+	    list<PExpr*>::const_iterator jdx = ov->by_order->begin();
+	    for (size_t idx = 0 ; idx < order.size() ; idx += 1) {
+		  if (jdx == ov->by_order->end())
+			break;
+		  if (*jdx) {
+			if (! class_scope->force_parameter_override(order[idx], *jdx, val_scope)) {
+			      cerr << li.get_fileline() << ": error: "
+				   << "Cannot override parameter `" << order[idx]
+				   << "` of class `" << pclass->pscope_name() << "`."
+				   << endl;
+			      des->errors += 1;
+			}
+		  }
+		  ++ jdx;
+	    }
+	    if (jdx != ov->by_order->end()) {
+		  cerr << li.get_fileline() << ": warning: "
+		       << "ignoring extra parameter override(s) for class `"
+		       << pclass->pscope_name() << "`." << endl;
+	    }
+      }
+
+      if (ov->by_name) {
+	    for (list<named_pexpr_t>::const_iterator it = ov->by_name->begin()
+		       ; it != ov->by_name->end() ; ++ it) {
+		  if (it->parm == 0)
+			continue;
+		  if (! class_scope->force_parameter_override(it->name, it->parm, val_scope)) {
+			cerr << li.get_fileline() << ": error: "
+			     << "Cannot override parameter `" << it->name
+			     << "` of class `" << pclass->pscope_name() << "`."
+			     << endl;
+			des->errors += 1;
+		  }
+	    }
+      }
+}
+
+/*
+ * Clone a parameterized class scope with explicit #() overrides, evaluate
+ * parameters, and elaborate methods. Cached by specialization key.
+ */
+static ivl_type_t specialize_class_type_(Design*des, NetScope*use_scope,
+					 netclass_t*generic, parmvalue_t*ov,
+					 const LineInfo&li)
+{
+      PClass*pclass = generic->get_pclass();
+      if (pclass == 0)
+	    return generic;
+
+      string key = specialization_key_(generic->get_name(), ov);
+      static map<string,netclass_t*> cache;
+      map<string,netclass_t*>::iterator hit = cache.find(key);
+      if (hit != cache.end())
+	    return hit->second;
+
+      NetScope*def_scope = generic->definition_scope();
+      if (def_scope == 0)
+	    def_scope = use_scope;
+
+      perm_string spec_name = lex_strings.make(key.c_str());
+      if (def_scope->find_class(des, spec_name)) {
+	      // Already registered under this mangled name.
+	    netclass_t*existing = def_scope->find_class(des, spec_name);
+	    cache[key] = existing;
+	    return existing;
+      }
+
+      class_type_t*use_type = pclass->type;
+      const netclass_t*use_base_class = generic->get_super();
+
+      netclass_t*use_class = new netclass_t(spec_name, use_base_class);
+      NetScope*class_scope = new NetScope(def_scope, hname_t(spec_name),
+					  NetScope::CLASS, def_scope->unit());
+      class_scope->set_line(pclass);
+      class_scope->set_class_def(use_class);
+      use_class->set_class_scope(class_scope);
+      use_class->set_definition_scope(def_scope);
+      use_class->set_virtual(use_type->virtual_class);
+      use_class->set_constraints(use_type->constraints);
+      use_class->set_pclass(pclass);
+      set_scope_timescale(des, class_scope, pclass);
+
+      class_scope->add_typedefs(&pclass->typedefs);
+
+	// Re-collect defaults, then apply #() overrides.
+      for (map<perm_string,LexicalScope::param_expr_t*>::const_iterator cur = pclass->parameters.begin()
+		 ; cur != pclass->parameters.end() ; ++ cur) {
+	    class_scope->set_parameter(cur->first, false, *(cur->second), 0);
+      }
+
+      for (map<perm_string,PWire*>::const_iterator cur = pclass->wires.begin()
+		 ; cur != pclass->wires.end() ; ++ cur) {
+	    class_scope->add_signal_placeholder(cur->second);
+      }
+
+      apply_class_param_overrides_(des, class_scope, use_scope, pclass, ov, li);
+      class_scope->evaluate_parameters(des);
+
+      for (map<perm_string,PTask*>::iterator cur = pclass->tasks.begin()
+		 ; cur != pclass->tasks.end() ; ++ cur) {
+	    hname_t use_name(cur->first);
+	    NetScope*method_scope = new NetScope(class_scope, use_name, NetScope::TASK);
+	    method_scope->is_auto(true);
+	    method_scope->set_line(cur->second);
+	    method_scope->add_imports(&cur->second->explicit_imports);
+	    cur->second->elaborate_scope(des, method_scope);
+      }
+
+      for (map<perm_string,PFunction*>::iterator cur = pclass->funcs.begin()
+		 ; cur != pclass->funcs.end() ; ++ cur) {
+	    hname_t use_name(cur->first);
+	    NetScope*method_scope = new NetScope(class_scope, use_name, NetScope::FUNC);
+	    method_scope->is_auto(true);
+	    method_scope->set_line(cur->second);
+	    method_scope->add_imports(&cur->second->explicit_imports);
+	    cur->second->elaborate_scope(des, method_scope);
+      }
+
+      def_scope->add_class(use_class);
+      cache[key] = use_class;
+
+      use_class->elaborate_sig(des, pclass);
+      use_class->elaborate(des, pclass);
+
+      return use_class;
 }
 
 
@@ -559,7 +768,27 @@ ivl_type_t typeref_t::elaborate_type_raw(Design*des, NetScope*s) const
 	    return new netvector_t(IVL_VT_LOGIC);
       }
 
-      return type->elaborate_type(des, s);
+	// Built-in parameterized classes still ignore #() overrides.
+      if (type->name == perm_string::literal("mailbox") ||
+	  type->name == perm_string::literal("semaphore"))
+	    return type->elaborate_type(des, s);
+
+      ivl_type_t base = type->elaborate_type(des, s);
+      if (!overrides_ ||
+	  ((overrides_->by_order == 0 || overrides_->by_order->empty()) &&
+	   (overrides_->by_name == 0 || overrides_->by_name->empty())))
+	    return base;
+
+      netclass_t*cls = const_cast<netclass_t*>(dynamic_cast<const netclass_t*>(base));
+      if (!cls || cls->get_pclass() == 0) {
+	    cerr << get_fileline() << ": sorry: "
+		 << "Parameterized type override for `" << type->name
+		 << "` is not supported yet." << endl;
+	    des->errors += 1;
+	    return base;
+      }
+
+      return specialize_class_type_(des, s, cls, overrides_, *this);
 }
 
 NetScope *typeref_t::find_scope(Design *des, NetScope *s) const

@@ -51,6 +51,10 @@ class netclass_t : public ivl_type_s {
 
       inline const NetScope* class_scope(void) const { return class_scope_; }
 
+	// Pform class (generic template) used for specialization / method elab.
+      void set_pclass(PClass*p) { pclass_ = p; }
+      PClass* get_pclass() const { return pclass_; }
+
 	// Set the scope for the class definition. This is the scope
 	// where the class definition was encountered, and may be used
 	// to locate symbols that the class definition may inherit
@@ -147,6 +151,7 @@ class netclass_t : public ivl_type_s {
 	// If this is derived from another base class, point to it
 	// here.
       const netclass_t*super_;
+      PClass*pclass_;
 	// Map property names to property table index.
       std::map<perm_string,size_t> properties_;
 	// Vector of properties.
