@@ -53,9 +53,7 @@ class uvm_sequence extends uvm_object;
   endtask
 
   task finish_item(uvm_sequence_item item);
-    uvm_sequencer s;
-    s = m_sequencer;
-    s.put_item(item);
+    m_sequencer.put_item(item);
   endtask
 endclass : uvm_sequence
 
@@ -73,15 +71,11 @@ class uvm_driver extends uvm_component;
   endfunction
 
   task get_next_item(output uvm_sequence_item item);
-    uvm_sequencer s;
-    s = seq_item_port;
-    s.get_next_item(item);
+    seq_item_port.get_next_item(item);
   endtask
 
   function void item_done();
-    uvm_sequencer s;
-    s = seq_item_port;
-    s.item_done();
+    seq_item_port.item_done();
   endfunction
 
   // Override: process one item (default no-op).

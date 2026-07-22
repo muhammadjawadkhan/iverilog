@@ -49,9 +49,7 @@ module driver_basic;
       ap = new("ap");
     endfunction
     virtual task drive_item(uvm_sequence_item item);
-      uvm_analysis_port p;
-      p = ap;
-      p.write(item);
+      ap.write(item);
     endtask
   endclass
 
@@ -59,7 +57,6 @@ module driver_basic;
   my_seq          seq;
   my_driver       drv;
   scoreboard      sb;
-  uvm_analysis_port ap;
   uvm_phase       ph;
   int             pass;
 
@@ -70,8 +67,7 @@ module driver_basic;
     drv = new("drv", null);
     sb = new("sb", null);
     drv.set_sequencer(sqr);
-    ap = drv.ap;
-    ap.connect(sb);
+    drv.ap.connect(sb);
 
     // Producer then consumer (same thread; mailbox holds the item).
     seq.start(sqr);

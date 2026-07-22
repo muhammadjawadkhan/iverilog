@@ -1878,8 +1878,8 @@ unsigned PECallFunction::test_width_method_(Design*, NetScope*,
 		  if (cls) {
 			int pidx = cls->property_idx_from_name(search_results.path_tail.front().name);
 			if (pidx >= 0) {
-			      const netclass_t*cg = dynamic_cast<const netclass_t*>(cls->get_prop_type(pidx));
-			      if (cg && cg->is_covergroup()
+			      const netclass_t*prop_cls = dynamic_cast<const netclass_t*>(cls->get_prop_type(pidx));
+			      if (prop_cls && prop_cls->is_covergroup()
 				  && search_results.path_tail.back().name
 				     == perm_string::literal("get_inst_coverage")) {
 				    expr_type_   = IVL_VT_REAL;
@@ -1887,6 +1887,19 @@ unsigned PECallFunction::test_width_method_(Design*, NetScope*,
 				    min_width_   = 1;
 				    signed_flag_ = true;
 				    return 1;
+			      }
+			      if (prop_cls && ! prop_cls->is_covergroup()) {
+				    NetScope*meth = prop_cls->method_from_name(search_results.path_tail.back().name);
+				    if (meth) {
+					  const NetNet*res = meth->find_signal(meth->basename());
+					  if (res) {
+						expr_type_   = res->data_type();
+						expr_width_  = res->vector_width();
+						min_width_   = expr_width_;
+						signed_flag_ = res->get_signed();
+						return expr_width_;
+					  }
+				    }
 			      }
 			}
 		  }
@@ -4220,6 +4233,15 @@ NetExpr* PECallFunction::elaborate_expr_method_(Design*des, NetScope*scope,
 						method_name, prop, element_type,
 						parms_, with_expr_, kind);
 			      }
+			}
+
+			/* Class-handle property: obj.prop.method(...) as a function. */
+			if (cg_type && ! cg_type->is_covergroup()) {
+			      NetEProperty*prop = new NetEProperty(search_results.net, pidx, nullptr);
+			      prop->set_line(*this);
+			      perm_string method_name = search_results.path_tail.back().name;
+			      return elaborate_class_method_net_this_(des, scope, prop, cg_type,
+								      method_name, &parms_);
 			}
 		  }
 	    }

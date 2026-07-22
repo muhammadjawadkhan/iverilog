@@ -4501,6 +4501,32 @@ NetProc* PCallTask::elaborate_method_(Design*des, NetScope*scope,
 									       parm_names);
 			      }
 			}
+
+			/* Class-handle property: obj.prop.method(...) where
+			   prop's type is a class. Resolve method on that type
+			   and pass NetEProperty as `this`. */
+			if (cg_type && ! cg_type->is_covergroup()) {
+			      NetScope*task = cg_type->method_from_name(method_name);
+			      if (task == 0) {
+				    if (! add_this_flag) {
+					  cerr << get_fileline() << ": error: "
+					       << "Can't find task " << method_name
+					       << " in class " << cg_type->get_name()
+					       << endl;
+					  des->errors += 1;
+				    }
+				    return 0;
+			      }
+			      if (debug_elaborate) {
+				    cerr << get_fileline() << ": PCallTask::elaborate_method_: "
+					 << "Elaborate " << cg_type->get_name()
+					 << " method " << task->basename()
+					 << " via property " << prop_name << endl;
+			      }
+			      NetEProperty*use_this = new NetEProperty(net, (size_t)pidx, 0);
+			      use_this->set_line(*this);
+			      return elaborate_build_call_(des, scope, task, use_this);
+			}
 		  }
 	    }
       }

@@ -28,6 +28,7 @@ Last updated: 2026-07-22
 | TLM | **Partial** on `feat/tlm-ports`: int `uvm_tlm_fifo` + blocking put/get ports. See [`docs/tlm.md`](tlm.md) and [`examples/tlm`](../examples/tlm). |
 | Sequences | **Partial**: `uvm_sequence` / `uvm_sequencer`; `start()` runs virtual `body()`. See [`docs/sequences.md`](sequences.md) and [`examples/sequences`](../examples/sequences). |
 | Driver / analysis | **Partial**: `uvm_driver` + `uvm_analysis_port` / `uvm_subscriber` (one subscriber). See [`docs/driver.md`](driver.md) and [`examples/driver`](../examples/driver). |
+| Property method calls | **Partial**: `obj.prop.method()` for class-handle properties. See [`docs/property-methods.md`](property-methods.md) and [`examples/property_methods`](../examples/property_methods). |
 | Virtual methods | **Partial**: runtime dispatch for class functions/tasks through handles; override auto storage. See [`docs/virtual-methods.md`](virtual-methods.md) and [`examples/virtual_methods`](../examples/virtual_methods). |
 | Mini-UVM smoke | **Partial**: factory + config_db + phases + sequences. See [`docs/mini-uvm.md`](mini-uvm.md) and [`examples/mini_uvm`](../examples/mini_uvm). |
 

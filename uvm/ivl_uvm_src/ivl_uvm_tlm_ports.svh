@@ -99,10 +99,8 @@ class uvm_analysis_port;
   endfunction
 
   function void write(uvm_sequence_item t);
-    uvm_subscriber s;
-    s = m_imp;
-    if (s != null)
-      s.write(t);
+    if (m_imp != null)
+      m_imp.write(t);
   endfunction
 endclass : uvm_analysis_port
 
