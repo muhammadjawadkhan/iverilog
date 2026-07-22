@@ -1468,6 +1468,16 @@ class_item /* IEEE1800-2005: A.1.8 */
   | property_qualifier_opt list_of_variable_decl_assignments_with_type ';'
       { pform_class_property(@2, $1, $2.type, $2.decl_assignments); }
 
+  /* Parameterized class property: static R#(T) me; (dedicated rule avoids
+     shift/reduce with delay '#' in list_of_variable_decl_assignments_with_type). */
+  | property_qualifier_opt TYPE_IDENTIFIER type_parameter_value list_of_variable_decl_assignments ';'
+      { pform_set_type_referenced(@2, $2.text);
+	typeref_t*tmp = new typeref_t($2.type, $3);
+	FILE_NAME(tmp, @2);
+	delete[]$2.text;
+	pform_class_property(@2, $1, tmp, $4);
+      }
+
   | property_qualifier_opt virtual_interface_type list_of_variable_decl_assignments ';'
       { pform_class_property(@2, $1, $2, $3); }
 

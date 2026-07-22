@@ -2402,6 +2402,24 @@ bool of_CMPSTR(vthread_t thr, vvp_code_t)
       return true;
 }
 
+bool of_CMPOBJ(vthread_t thr, vvp_code_t)
+{
+      vvp_object_t re;
+      vvp_object_t le;
+      thr->pop_object(re);
+      thr->pop_object(le);
+
+      if (le == re) {
+	    thr->flags[4] = BIT4_1;
+	    thr->flags[5] = BIT4_0;
+      } else {
+	    thr->flags[4] = BIT4_0;
+	    thr->flags[5] = BIT4_0;
+      }
+
+      return true;
+}
+
 static void of_CMPU_the_hard_way(vthread_t thr, unsigned wid,
 				 const vvp_vector4_t&lval,
 				 const vvp_vector4_t&rval)

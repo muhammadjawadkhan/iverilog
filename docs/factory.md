@@ -22,6 +22,8 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 | `uvm_object_registry#(T,Tname)` | Extends wrapper; nested `this_type`; `new` / `get()` auto-registers |
 | `TYPE::type_id::get()` | Returns `this_type` (no `$cast`); bare `m_inst = new` allocates specialization |
 | `TYPE::type_id::create(name)` | Static; typed `T` return via `get()` + virtual `create_object` |
+| `static R#(T[,Tname]) prop` | Class property with explicit `#()` specialization |
+| Class-handle `==` / `!=` | Identity compare via `%cmp/obj` |
 | `uvm_factory::register` | Name-keyed type table (fixed size, default 64) |
 | `find_by_name` | Lookup registered wrapper |
 | `set_type_override_by_name` | Requested → override type name |
@@ -33,15 +35,15 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 
 ## Gaps
 
-- Direct `static R#(T) me` property syntax still does not parse (use `typedef R#(T[,Tname]) this_type` instead)
+- `static function R#(T) get()` return type still does not parse (use `typedef … this_type`)
 - Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
-- Class-handle `!=` compare still incomplete in codegen
 
-## Example
+## Examples
 
-[`examples/factory`](../examples/factory) — prints `PASSED`.
+[`examples/factory`](../examples/factory) — `factory_basic` prints `PASSED`; `factory_singleton` exercises `static R#(T)` + handle compare.
 
 ```bash
 make -C examples/factory run
+make -C examples/factory run-singleton
 ```

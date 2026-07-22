@@ -515,6 +515,40 @@ static void draw_binary_vec4_compare_class(ivl_expr_t expr)
 	    return;
       }
 
+	/* Class handle vs null: evaluate handle, then %test_nul/obj. */
+      if (ivl_expr_type(re)==IVL_EX_NULL &&
+	  ivl_expr_value(le)==IVL_VT_CLASS) {
+	    draw_eval_object(le);
+	    fprintf(vvp_out, "    %%test_nul/obj;\n");
+	    if (ivl_expr_opcode(expr) == 'n')
+		  fprintf(vvp_out, "    %%flag_inv 4;\n");
+	    fprintf(vvp_out, "    %%flag_get/vec4 4;\n");
+	    fprintf(vvp_out, "    %%pop/obj 1, 0;\n");
+	    return;
+      }
+
+	/* Class handle vs class handle: evaluate both, then %cmp/obj. */
+      if (ivl_expr_value(le)==IVL_VT_CLASS &&
+	  ivl_expr_value(re)==IVL_VT_CLASS) {
+	    draw_eval_object(le);
+	    draw_eval_object(re);
+	    switch (ivl_expr_opcode(expr)) {
+		case 'e': /* == */
+		  fprintf(vvp_out, "    %%cmp/obj;\n");
+		  fprintf(vvp_out, "    %%flag_get/vec4 4;\n");
+		  break;
+		case 'n': /* != */
+		  fprintf(vvp_out, "    %%cmp/obj;\n");
+		  fprintf(vvp_out, "    %%flag_inv 4;\n");
+		  fprintf(vvp_out, "    %%flag_get/vec4 4;\n");
+		  break;
+		default:
+		  assert(0);
+		  break;
+	    }
+	    return;
+      }
+
       fprintf(stderr, "SORRY: Compare class handles not implemented\n");
       fprintf(vvp_out, " ; XXXX compare class handles. re-type=%d, le-type=%d\n",
 	      ivl_expr_type(re), ivl_expr_type(le));
