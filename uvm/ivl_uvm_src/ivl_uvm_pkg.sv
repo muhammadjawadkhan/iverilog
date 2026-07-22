@@ -44,6 +44,8 @@ package ivl_uvm_pkg;
   `include "ivl_uvm_config_db.svh"
   `include "ivl_uvm_mbx.svh"
   `include "ivl_uvm_tlm.svh"
+  `include "ivl_uvm_tlm_ports.svh"
+  `include "ivl_uvm_seq.svh"
 
   `UVM_TESTNAME uvm_test_top;
 

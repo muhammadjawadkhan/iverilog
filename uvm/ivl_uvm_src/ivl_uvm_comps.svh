@@ -26,9 +26,12 @@
 
 class uvm_sequence_item extends uvm_object;
   int sequence_id;
+  int data;
 
   function new (string name = "uvm_sequence_item");
     super.new (name);
+    sequence_id = 0;
+    data = 0;
   endfunction : new 
 
 endclass : uvm_sequence_item 
