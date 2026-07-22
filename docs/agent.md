@@ -33,6 +33,8 @@ seq.start(env.agent.sequencer); // nested property read
 - Calling `super.build_phase` / `super.connect_phase` on virtual overrides
   recurses (use local body only)
 - No multi-agent / virtual sequencer
+- Analysis fan-out is on the port (see [driver.md](driver.md)), not a
+  separate export/imp hierarchy
 
 ## Example
 

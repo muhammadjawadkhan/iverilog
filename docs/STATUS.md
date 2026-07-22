@@ -27,11 +27,11 @@ Last updated: 2026-07-22
 | Phases / objections | **Partial** on `feat/phases-objections`: `uvm_objection`, phase objection hooks, component children. See [`docs/phases.md`](phases.md) and [`examples/phases`](../examples/phases). |
 | TLM | **Partial** on `feat/tlm-ports`: int `uvm_tlm_fifo` + blocking put/get ports. See [`docs/tlm.md`](tlm.md) and [`examples/tlm`](../examples/tlm). |
 | Sequences | **Partial**: `uvm_sequence` / `uvm_sequencer`; `start()` runs virtual `body()`. See [`docs/sequences.md`](sequences.md) and [`examples/sequences`](../examples/sequences). |
-| Driver / analysis | **Partial**: `uvm_driver` + `uvm_analysis_port` / `uvm_subscriber` (one subscriber). See [`docs/driver.md`](driver.md) and [`examples/driver`](../examples/driver). |
+| Driver / analysis | **Partial**: `uvm_driver` + `uvm_analysis_port` / `uvm_subscriber` (fixed fan-out). See [`docs/driver.md`](driver.md) and [`examples/driver`](../examples/driver). |
 | Agent / monitor / env | **Partial**: `uvm_monitor`, `uvm_agent`, `uvm_env`. See [`docs/agent.md`](agent.md) and [`examples/agent`](../examples/agent). |
 | Property method calls | **Partial**: `obj.prop.method()` and `obj.a.b.method()` class-handle chains; nested property reads. See [`docs/property-methods.md`](property-methods.md) and [`examples/property_methods`](../examples/property_methods). |
 | Virtual methods | **Partial**: runtime dispatch for class functions/tasks through handles; override auto storage. See [`docs/virtual-methods.md`](virtual-methods.md) and [`examples/virtual_methods`](../examples/virtual_methods). |
-| Mini-UVM smoke | **Partial**: factory + config_db + phases + sequences. See [`docs/mini-uvm.md`](mini-uvm.md) and [`examples/mini_uvm`](../examples/mini_uvm). |
+| Mini-UVM smoke | **Partial**: factory + config_db + phases + sequences + agent/analysis. See [`docs/mini-uvm.md`](mini-uvm.md) and [`examples/mini_uvm`](../examples/mini_uvm). |
 
 ## Remotes
 

@@ -1,7 +1,8 @@
 # Mini-UVM integrated smoke (roadmap #11)
 
 Status: **partial** — one TB that exercises factory (virtual `create_object`),
-`config_db`, phases/objections, and sequences (`start` → virtual `body`).
+`config_db`, phases/objections, sequences (`start` → virtual `body`), plus
+agent/monitor with analysis fan-out.
 
 Track: **muhammadjawadkhan/iverilog-uvm** only.
 
@@ -13,7 +14,9 @@ Track: **muhammadjawadkhan/iverilog-uvm** only.
 | config_db | string set/get |
 | Phases | `run_phase` objections |
 | Sequences | `start()` on `uvm_sequence` handle dispatches derived `body()` |
-| Virtual methods | used by factory create and sequence `body` |
+| Agent / analysis | `my_env` → agent → monitor AP → two subscribers |
+| Nested props | `env.agent.sequencer`, `agent.monitor.ap.connect` |
+| Virtual methods | factory create, sequence `body`, driver `drive_item`, subscriber `write` |
 
 ## Example
 

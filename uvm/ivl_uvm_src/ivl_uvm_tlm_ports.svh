@@ -77,8 +77,12 @@ class uvm_blocking_get_port;
   endfunction
 endclass : uvm_blocking_get_port
 
-// Analysis: single-subscriber smoke (no subscriber queues / AAs of handles).
-// Connect one uvm_subscriber; write() dispatches virtually.
+// Analysis: fixed fan-out to uvm_subscriber list (no AA/queue of handles).
+// write() dispatches virtually to each connected subscriber.
+`ifndef IVL_UVM_MAX_ANALYSIS_IMPS
+  `define IVL_UVM_MAX_ANALYSIS_IMPS 8
+`endif
+
 class uvm_subscriber extends uvm_component;
   function new(string name = "uvm_subscriber", uvm_component parent = null);
     super.new(name, parent);
@@ -89,18 +93,34 @@ class uvm_subscriber extends uvm_component;
 endclass : uvm_subscriber
 
 class uvm_analysis_port;
-  uvm_subscriber m_imp;
+  uvm_subscriber m_imps[`IVL_UVM_MAX_ANALYSIS_IMPS];
+  int m_num_imps;
 
   function new(string name = "uvm_analysis_port");
+    m_num_imps = 0;
   endfunction
 
   function void connect(uvm_subscriber imp);
-    m_imp = imp;
+    if (m_num_imps >= `IVL_UVM_MAX_ANALYSIS_IMPS) begin
+      $display("UVM_ERROR @ 0: reporter [AP] analysis subscriber table full");
+      return;
+    end
+    m_imps[m_num_imps] = imp;
+    m_num_imps++;
+  endfunction
+
+  function int size();
+    return m_num_imps;
   endfunction
 
   function void write(uvm_sequence_item t);
-    if (m_imp != null)
-      m_imp.write(t);
+    int i;
+    uvm_subscriber s;
+    for (i = 0; i < m_num_imps; i++) begin
+      s = m_imps[i];
+      if (s != null)
+        s.write(t);
+    end
   endfunction
 endclass : uvm_analysis_port
 

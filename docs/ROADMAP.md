@@ -22,12 +22,12 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
     - **Phases / objections** — **partial** (see [phases.md](phases.md))
     - **TLM** — **partial** (int put/get; see [tlm.md](tlm.md))
     - **Sequences** — **partial** (`start` → virtual `body`; see [sequences.md](sequences.md))
-    - **Driver / analysis** — **partial** (`uvm_driver` + single-subscriber analysis; see [driver.md](driver.md))
+    - **Driver / analysis** — **partial** (`uvm_driver` + fixed analysis fan-out; see [driver.md](driver.md))
     - **Agent / monitor / env** — **partial** (see [agent.md](agent.md))
     - **Virtual methods** — **partial** (see [virtual-methods.md](virtual-methods.md))
     - **Property method calls** — **partial** (`obj.a.b.method` chains; see [property-methods.md](property-methods.md))
 11. Smoke: trimmed “hello UVM”, then larger Accellera UVM 1.2 slices as features land
-    - **Mini-UVM** — **partial** (factory + config_db + phases + sequences; see [mini-uvm.md](mini-uvm.md))
+    - **Mini-UVM** — **partial** (factory + config_db + phases + sequences + agent; see [mini-uvm.md](mini-uvm.md))
     - **Driver smoke** — **partial** (see [driver.md](driver.md) / [`examples/driver`](../examples/driver))
     - **Agent smoke** — **partial** (see [agent.md](agent.md) / [`examples/agent`](../examples/agent))
 

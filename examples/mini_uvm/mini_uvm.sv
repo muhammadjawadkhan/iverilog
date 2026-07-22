@@ -1,4 +1,4 @@
-// Tier B #11 smoke: factory + config_db + phases + sequences + virtual dispatch.
+// Tier B #11 smoke: factory + config_db + phases + sequences + agent/analysis.
 `timescale 1ns/1ps
 
 module mini_uvm;
@@ -86,6 +86,81 @@ module mini_uvm;
     endtask
   endclass
 
+  class scoreboard extends uvm_subscriber;
+    int last_data;
+    int seen;
+    function new(string name = "scoreboard", uvm_component parent = null);
+      super.new(name, parent);
+      last_data = 0;
+      seen = 0;
+    endfunction
+    virtual function void write(uvm_sequence_item t);
+      pkt_item mi;
+      bit ok;
+      ok = $cast(mi, t);
+      if (ok) begin
+        last_data = mi.data;
+        seen = seen + 1;
+      end
+    endfunction
+  endclass
+
+  class coverage extends uvm_subscriber;
+    int hits;
+    function new(string name = "coverage", uvm_component parent = null);
+      super.new(name, parent);
+      hits = 0;
+    endfunction
+    virtual function void write(uvm_sequence_item t);
+      hits = hits + 1;
+    endfunction
+  endclass
+
+  class my_driver extends uvm_driver;
+    uvm_monitor mon;
+    function new(string name = "my_driver", uvm_component parent = null);
+      super.new(name, parent);
+    endfunction
+    virtual task drive_item(uvm_sequence_item item);
+      if (mon != null)
+        mon.sample_and_write(item);
+    endtask
+  endclass
+
+  class my_agent extends uvm_agent;
+    function new(string name = "my_agent", uvm_component parent = null);
+      super.new(name, parent);
+    endfunction
+    virtual function void build_phase(uvm_phase phase);
+      my_driver drv;
+      monitor = new("monitor", this);
+      sequencer = new("sequencer", this);
+      drv = new("driver", this);
+      driver = drv;
+      drv.mon = monitor;
+    endfunction
+  endclass
+
+  class my_env extends uvm_env;
+    my_agent agent;
+    scoreboard sb;
+    coverage cov;
+    function new(string name = "my_env", uvm_component parent = null);
+      super.new(name, parent);
+    endfunction
+    virtual function void build_phase(uvm_phase phase);
+      agent = new("agent", this);
+      sb = new("sb", this);
+      cov = new("cov", this);
+      agent.build_phase(phase);
+    endfunction
+    virtual function void connect_phase(uvm_phase phase);
+      agent.connect_phase(phase);
+      agent.monitor.ap.connect(sb);
+      agent.monitor.ap.connect(cov);
+    endfunction
+  endclass
+
   pkt_wrapper     w_pkt;
   pkt_ext_wrapper w_ext;
   uvm_factory     fac;
@@ -94,14 +169,16 @@ module mini_uvm;
   uvm_sequence    seq_h;
   pkt_seq         seq;
   mini_test       tst;
+  my_env          env;
   uvm_phase       ph;
   uvm_sequence_item got;
   pkt_item        mi;
   uvm_object      obj;
   pkt_ext         pe;
+  scoreboard      sb;
+  coverage        cov;
   bit             ok;
   int             pass;
-  int             n;
   string          mode;
 
   initial begin
@@ -152,6 +229,32 @@ module mini_uvm;
       pass = 0;
     end
     sqr.item_done();
+
+    // --- agent + analysis fan-out (nested props) ---
+    env = new("env", null);
+    seq = new("seq");
+    ph = new("build");
+    env.build_phase(ph);
+    ph = new("connect");
+    env.connect_phase(ph);
+    sb = env.sb;
+    cov = env.cov;
+    if (env.agent.monitor.ap.size() !== 2) begin
+      $display("FAIL: analysis fan-out size=%0d", env.agent.monitor.ap.size());
+      pass = 0;
+    end
+    seq.start(env.agent.sequencer);
+    ph = new("run");
+    env.agent.driver.run_phase(ph);
+    ph.wait_for_objections_drop();
+    if (sb.seen !== 1 || sb.last_data !== 2) begin
+      $display("FAIL: agent sb seen=%0d data=%0d", sb.seen, sb.last_data);
+      pass = 0;
+    end
+    if (cov.hits !== 1) begin
+      $display("FAIL: agent cov hits=%0d", cov.hits);
+      pass = 0;
+    end
 
     if (pass)
       $display("PASSED");
