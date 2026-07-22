@@ -25,6 +25,8 @@ Last updated: 2026-07-21
 | Factory | **Partial** on `feat/factory-slice`: name-based `uvm_factory` register / create / type-override; `uvm_object_wrapper` proxies; no `uvm_object_registry#(T)` yet. See [`docs/factory.md`](factory.md) and [`examples/factory`](../examples/factory). |
 | config_db | **Partial** on `feat/config-db`: exact-match set/get/exists for `int` and `string`. See [`docs/config-db.md`](config-db.md) and [`examples/config_db`](../examples/config_db). |
 | Phases / objections | **Partial** on `feat/phases-objections`: `uvm_objection`, phase objection hooks, component children. See [`docs/phases.md`](phases.md) and [`examples/phases`](../examples/phases). |
+| TLM | **Partial** on `feat/tlm-ports`: int `uvm_tlm_fifo` + blocking put/get ports. See [`docs/tlm.md`](tlm.md) and [`examples/tlm`](../examples/tlm). |
+| Sequences | **Partial** on `feat/tlm-ports`: `uvm_sequence` / `uvm_sequencer` via package mailbox. See [`docs/sequences.md`](sequences.md) and [`examples/sequences`](../examples/sequences). |
 
 ## Remotes
 

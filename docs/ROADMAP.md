@@ -20,6 +20,8 @@ Each item should be a dedicated `feat/<name>` branch, with tests/examples and a 
     - **Factory** — **partial** (name-based register/create/override; see [factory.md](factory.md))
     - **config_db** — **partial** (int/string exact match; see [config-db.md](config-db.md))
     - **Phases / objections** — **partial** (see [phases.md](phases.md))
+    - **TLM** — **partial** (int put/get; see [tlm.md](tlm.md))
+    - **Sequences** — **partial** (see [sequences.md](sequences.md))
 11. Smoke: trimmed “hello UVM”, then larger Accellera UVM 1.2 slices as features land
 
 ## Already usable baseline (do not re-do first)
