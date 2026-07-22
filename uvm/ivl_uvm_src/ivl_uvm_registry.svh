@@ -1,7 +1,8 @@
 // Accellera-shaped uvm_object_registry#(T, Tname) for IVL_UVM.
 //
-// type_id::get() returns a singleton wrapper (stored as uvm_object_wrapper
-// because self-typed static properties of param classes are not parsed yet).
+// get() uses `m_inst = new` where m_inst is typed as the base wrapper;
+// PENewClass elaborates bare `new` inside a method as the enclosing class
+// when that class is compatible with the LHS type.
 `ifndef IVL_UVM_REGISTRY_SVH
 `define IVL_UVM_REGISTRY_SVH
 

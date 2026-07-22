@@ -8241,6 +8241,16 @@ NetExpr* PENewClass::elaborate_expr(Design*des, NetScope*scope,
 		  des->errors++;
 		  return nullptr;
 	    }
+      } else if (scope) {
+	    // Bare `new` inside a class method: if the LHS is a base
+	    // handle, allocate the enclosing class when compatible
+	    // (Accellera-style `base_t m_inst = new` in a derived method).
+	    const NetScope*cs = scope->get_class_scope();
+	    if (cs && cs->class_def()) {
+		  const netclass_t*encl = cs->class_def();
+		  if (encl != ctype && ntype->type_compatible(encl))
+			ctype = encl;
+	    }
       }
 
       if (ctype->is_virtual()) {

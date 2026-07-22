@@ -19,7 +19,7 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 |-----|--------|
 | `uvm_object_wrapper` | `type_name` property; virtual `create_object` / `create_component` |
 | `uvm_object_registry#(T,Tname)` | Extends wrapper; `new` / `get()` auto-registers; virtual `create_object` news `T` |
-| `TYPE::type_id::get()` | Class-scoped static call; returns singleton `uvm_object_wrapper` |
+| `TYPE::type_id::get()` | Class-scoped static call; bare `m_inst = new` allocates the enclosing specialization |
 | `uvm_factory::register` | Name-keyed type table (fixed size, default 64) |
 | `find_by_name` | Lookup registered wrapper |
 | `set_type_override_by_name` | Requested → override type name |
@@ -33,7 +33,7 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 
 - `get()` returns `uvm_object_wrapper` (not the specialized registry); `$cast` to `TYPE::type_id` for typed `create`
 - No static `type_id::create()` yet (name clash with instance `create`)
-- Self-typed static properties of param classes not parsed (`static R#(T) me`)
+- `C#(T)::method()` parse (Accellera `uvm_config_db#(int)::set`) still TODO
 - Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
 
