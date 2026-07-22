@@ -5002,6 +5002,19 @@ expr_primary
 	delete $4;
 	$$ = tmp;
       }
+  /* Explicit specialization: C#(T)::method() — dedicated rule avoids
+     shift/reduce with delay '#' after type names in class_scope. */
+  | TYPE_IDENTIFIER type_parameter_value K_SCOPE_RES hierarchy_identifier argument_list_parens
+      { pform_set_type_referenced(@1, $1.text);
+	typeref_t*cls = new typeref_t($1.type, $2);
+	FILE_NAME(cls, @1);
+	delete[]$1.text;
+	PECallFunction*tmp = new PECallFunction(cls, *$4, *$5);
+	FILE_NAME(tmp, @4);
+	delete $4;
+	delete $5;
+	$$ = tmp;
+      }
   | K_this
       { PEIdent*tmp = new PEIdent(perm_string::literal(THIS_TOKEN), UINT_MAX);
 	FILE_NAME(tmp,@1);
@@ -7764,6 +7777,24 @@ subroutine_call
 	FILE_NAME(tmp, @1);
 	delete $1;
 	delete $2;
+	$$ = tmp;
+      }
+  | class_scope hierarchy_identifier { lex_in_class_scope(0); } argument_list_parens_opt
+      { PCallTask*tmp = new PCallTask($1, *$2, *$4);
+	FILE_NAME(tmp, @2);
+	delete $2;
+	delete $4;
+	$$ = tmp;
+      }
+  | TYPE_IDENTIFIER type_parameter_value K_SCOPE_RES hierarchy_identifier argument_list_parens_opt
+      { pform_set_type_referenced(@1, $1.text);
+	typeref_t*cls = new typeref_t($1.type, $2);
+	FILE_NAME(cls, @1);
+	delete[]$1.text;
+	PCallTask*tmp = new PCallTask(cls, *$4, *$5);
+	FILE_NAME(tmp, @4);
+	delete $4;
+	delete $5;
 	$$ = tmp;
       }
   | SYSTEM_IDENTIFIER argument_list_parens_opt

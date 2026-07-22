@@ -12,6 +12,7 @@ class pkt extends uvm_object;
 endclass
 
 ok = $cast(w_pkt, pkt::type_id::get());  // singleton auto-registers
+p = pkt::type_id::create("p0");           // static create via get()+create_object
 obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 ```
 
@@ -20,6 +21,7 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 | `uvm_object_wrapper` | `type_name` property; virtual `create_object` / `create_component` |
 | `uvm_object_registry#(T,Tname)` | Extends wrapper; `new` / `get()` auto-registers; virtual `create_object` news `T` |
 | `TYPE::type_id::get()` | Class-scoped static call; bare `m_inst = new` allocates the enclosing specialization |
+| `TYPE::type_id::create(name)` | Static; typed `T` return via `get()` + virtual `create_object` |
 | `uvm_factory::register` | Name-keyed type table (fixed size, default 64) |
 | `find_by_name` | Lookup registered wrapper |
 | `set_type_override_by_name` | Requested → override type name |
@@ -31,9 +33,8 @@ obj = uvm_get_factory().create_object_by_name("pkt", "", "p0");
 
 ## Gaps
 
-- `get()` returns `uvm_object_wrapper` (not the specialized registry); `$cast` to `TYPE::type_id` for typed `create`
-- No static `type_id::create()` yet (name clash with instance `create`)
-- `C#(T)::method()` parse (Accellera `uvm_config_db#(int)::set`) still TODO
+- `get()` returns `uvm_object_wrapper` (not the specialized registry); `$cast` to `TYPE::type_id` still needed for typed registry handles
+- Self-typed `static R#(T) me` / `typedef R#(T,Tname) this_type` still does not parse cleanly
 - Full Accellera `` `uvm_object_utils `` / field macros still stubbed
 - Instance overrides; full coreservice
 

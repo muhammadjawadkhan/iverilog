@@ -163,7 +163,7 @@ module mini_uvm;
   pkt_wrapper     w_pkt;
   pkt_ext_wrapper w_ext;
   uvm_factory     fac;
-  uvm_config_db   cdb;
+  ivl_uvm_config_db_box   cdb;
   uvm_sequencer   sqr;
   uvm_sequence    seq_h;
   pkt_seq         seq;

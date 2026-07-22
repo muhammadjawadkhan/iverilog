@@ -949,7 +949,10 @@ void PBreak::dump(ostream&out, unsigned ind) const
 
 void PCallTask::dump(ostream&out, unsigned ind) const
 {
-      out << setw(ind) << "" << path_;
+      out << setw(ind) << "";
+      if (class_type_)
+	    out << "<class>::";
+      out << path_;
 
       if (! parms_.empty()) {
 	    out << "(" << parms_ << ")";

@@ -55,10 +55,10 @@ module factory_basic;
       pass = 0;
     end
 
-    // Also exercise wrapper.create directly.
-    p = w_pkt.create("p0b");
+    // Also exercise TYPE::type_id::create (static).
+    p = pkt::type_id::create("p0b");
     if (p == null || p.kind !== 1) begin
-      $display("FAIL: type_id.create");
+      $display("FAIL: type_id::create");
       pass = 0;
     end
 

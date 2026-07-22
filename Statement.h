@@ -234,6 +234,8 @@ class PCallTask  : public Statement {
       explicit PCallTask(PPackage *pkg, const pform_name_t &n, const std::list<named_pexpr_t> &parms);
       explicit PCallTask(const pform_name_t &n, const std::list<named_pexpr_t> &parms);
       explicit PCallTask(perm_string n, const std::list<named_pexpr_t> &parms);
+	// Class-scoped static call: Class::method(...) / C#(T)::set(...)
+      explicit PCallTask(data_type_t* cls, const pform_name_t &n, const std::list<named_pexpr_t> &parms);
       ~PCallTask() override;
 
       const pform_name_t& path() const;
@@ -252,6 +254,7 @@ class PCallTask  : public Statement {
     private:
       NetProc* elaborate_sys(Design*des, NetScope*scope) const;
       NetProc* elaborate_usr(Design*des, NetScope*scope) const;
+      NetProc* elaborate_class_scope_(Design*des, NetScope*scope) const;
 
       NetProc*elaborate_method_(Design*des, NetScope*scope,
                                 bool add_this_flag = false) const;
@@ -307,6 +310,7 @@ class PCallTask  : public Statement {
       bool test_task_calls_ok_(Design*des, const NetScope*scope) const;
 
       PPackage*package_;
+      data_type_t*class_type_;
       pform_name_t path_;
       std::vector<named_pexpr_t> parms_;
       std::vector<PExpr*> constraint_exprs_;

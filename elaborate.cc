@@ -4003,9 +4003,66 @@ NetProc* PCallTask::elaborate_sys(Design*des, NetScope*scope) const
  *    y = b;
  *  end
  */
+NetProc* PCallTask::elaborate_class_scope_(Design*des, NetScope*scope) const
+{
+      ivl_assert(*this, class_type_);
+
+      ivl_type_t use_type = class_type_->elaborate_type(des, scope);
+      const netclass_t*cls = dynamic_cast<const netclass_t*>(use_type);
+      if (cls == 0) {
+	    cerr << get_fileline() << ": error: "
+		 << "Class scope before `::' does not name a class type."
+		 << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      if (path_.size() != 1) {
+	    cerr << get_fileline() << ": sorry: "
+		 << "Only Class::method(...) is supported as a statement (got `"
+		 << path_ << "')." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      perm_string method_name = peek_tail_name(path_);
+      NetScope*method = cls->method_from_name(method_name);
+      if (method == 0) {
+	    cerr << get_fileline() << ": error: " << method_name
+		 << " is not a method of class " << cls->get_name()
+		 << "." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+      if (method->type() != NetScope::FUNC && method->type() != NetScope::TASK) {
+	    cerr << get_fileline() << ": error: " << method_name
+		 << " of class " << cls->get_name()
+		 << " is not a task or function." << endl;
+	    des->errors += 1;
+	    return 0;
+      }
+
+	/* Specialize/late-elab method body if this specialization was
+	   created after the normal class-method pass (e.g. first use is
+	   C#(T)::set with no prior C#(T) variable). */
+      if (method->type() == NetScope::FUNC && method->elab_stage() < 3) {
+	    const PFunction*pfunc = method->func_pform();
+	    if (pfunc)
+		  pfunc->elaborate(des, method);
+      }
+
+      NetENull*null_this = new NetENull;
+      null_this->set_line(*this);
+      return elaborate_build_call_(des, scope, method, null_this, true);
+}
+
 NetProc* PCallTask::elaborate_usr(Design*des, NetScope*scope) const
 {
       ivl_assert(*this, scope);
+
+      if (class_type_)
+	    return elaborate_class_scope_(des, scope);
 
       NetScope*pscope = scope;
       if (package_) {

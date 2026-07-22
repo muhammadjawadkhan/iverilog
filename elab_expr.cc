@@ -4038,6 +4038,13 @@ NetExpr* PECallFunction::elaborate_class_method_net_this_(Design*des, NetScope*s
 	    return 0;
       }
 
+	/* Late-elab specialized method bodies on first Class:: / C#(T):: use. */
+      if (method->elab_stage() < 3) {
+	    const PFunction*pfunc = method->func_pform();
+	    if (pfunc)
+		  pfunc->elaborate(des, method);
+      }
+
       const NetFuncDef*def = method->func_def();
       ivl_assert(*this, def);
 

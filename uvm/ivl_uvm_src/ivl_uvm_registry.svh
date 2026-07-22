@@ -34,6 +34,7 @@ class uvm_object_registry #(type T = ivl_uvm_registry_dummy,
   endfunction
 
   // Accellera-shaped singleton. Call as TYPE::type_id::get().
+  // Returns the base wrapper; $cast to TYPE::type_id for typed create.
   static function uvm_object_wrapper get();
     if (m_inst == null)
       m_inst = new;
@@ -46,11 +47,15 @@ class uvm_object_registry #(type T = ivl_uvm_registry_dummy,
     return obj;
   endfunction
 
-  function T create(string name = "");
+  // Accellera-shaped static create: TYPE::type_id::create(name).
+  // Goes through get()+create_object so type overrides still apply.
+  static function T create(string name = "");
     T obj;
+    uvm_object_wrapper w;
     uvm_object tmp;
     bit ok;
-    tmp = create_object(name);
+    w = get();
+    tmp = w.create_object(name);
     ok = $cast(obj, tmp);
     return obj;
   endfunction
